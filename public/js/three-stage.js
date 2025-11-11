@@ -11,7 +11,7 @@
     respawnCount: 3,
     spawnRange: { x: [-6, 6], y: [-10, 15] },
     speedRange: { y: [0.02, 0.04], rot: [0.01, 0.02] },
-    size: { width: 1, height: 1.4 },
+    size: { width: 1, height: 1 },
     maxLanterns: 500
   };
 

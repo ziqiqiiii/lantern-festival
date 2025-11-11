@@ -16,8 +16,25 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// Serve static UI
-app.use(express.static(path.join(__dirname, 'public')));
+// Room timeout configuration (in milliseconds)
+// Options: 3hr, 6hr, 1day, 3day, 1week, 1month, or 'never'
+const ROOM_TIMEOUT_PRESETS = {
+  '3hr': 3 * 60 * 60 * 1000,
+  '6hr': 6 * 60 * 60 * 1000,
+  '1day': 24 * 60 * 60 * 1000,
+  '3day': 3 * 24 * 60 * 60 * 1000,
+  '1week': 7 * 24 * 60 * 60 * 1000,
+  '1month': 30 * 24 * 60 * 60 * 1000,
+  'never': null
+};
+
+const ROOM_TIMEOUT_SETTING = process.env.ROOM_TIMEOUT || '1day';
+const ROOM_TIMEOUT = ROOM_TIMEOUT_PRESETS[ROOM_TIMEOUT_SETTING] || ROOM_TIMEOUT_PRESETS['1day'];
+
+console.log(`Room timeout setting: ${ROOM_TIMEOUT_SETTING} (${ROOM_TIMEOUT ? ROOM_TIMEOUT / 1000 / 60 + ' minutes' : 'never'})`);
+
+// Track room activity
+const roomActivity = new Map(); // pin -> { lastActivity: timestamp, timeoutId: timeoutId }
 
 // Redis client for rooms persistence (optional). If REDIS_URL not set, we'll keep in-memory.
 let redisClient = null;
@@ -35,6 +52,47 @@ function generatePin() {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
+// Function to clean up inactive room
+function cleanupRoom(pin) {
+  console.log(`Cleaning up inactive room: ${pin}`);
+  const room = rooms.get(pin);
+  if (room) {
+    // Notify all connected clients
+    io.to(pin).emit('room-closed', { message: 'Room closed due to inactivity' });
+
+    // Remove from memory
+    rooms.delete(pin);
+    roomActivity.delete(pin);
+
+    // Remove from Redis if applicable
+    if (redisClient) {
+      redisClient.del(`room:${pin}`).catch(err => console.error('Redis delete error:', err));
+    }
+  }
+}
+
+// Function to update room activity and reset timeout
+function updateRoomActivity(pin) {
+  if (!ROOM_TIMEOUT) return; // No timeout if set to 'never'
+
+  const activity = roomActivity.get(pin);
+
+  // Clear existing timeout if any
+  if (activity && activity.timeoutId) {
+    clearTimeout(activity.timeoutId);
+  }
+
+  // Set new timeout
+  const timeoutId = setTimeout(() => {
+    cleanupRoom(pin);
+  }, ROOM_TIMEOUT);
+
+  roomActivity.set(pin, {
+    lastActivity: Date.now(),
+    timeoutId: timeoutId
+  });
+}
+
 app.get('/create-room', async (req, res) => {
   let pin;
   do {
@@ -45,13 +103,32 @@ app.get('/create-room', async (req, res) => {
   if (redisClient) {
     await redisClient.hSet(`room:${pin}`, { hostSocketId: '', players: JSON.stringify([]) });
   }
+
+  // Initialize room activity tracking
+  updateRoomActivity(pin);
+
   res.json({ pin });
+});
+
+// Check if room exists (for host reconnection)
+app.get('/check-room/:pin', (req, res) => {
+  const { pin } = req.params;
+  const exists = rooms.has(pin);
+  res.json({ exists, pin });
+});
+
+// Serve join landing page
+app.get('/join', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'join.html'));
 });
 
 // Serve join page at /join/:pin (mobile)
 app.get('/join/:pin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'mobile.html'));
+  res.sendFile(path.join(__dirname, 'public', 'join.html'));
 });
+
+// Serve static UI - must be AFTER API routes to avoid conflicts
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Helper to persist player list
 async function addPlayerToRoom(pin, player) {
@@ -86,6 +163,10 @@ io.on('connection', (socket) => {
     socket.join(pin);
     socket.pin = pin;
     console.log(`Host ${socket.id} joined room ${pin}`);
+
+    // Update room activity
+    updateRoomActivity(pin);
+
     // send current players if any
     socket.emit('room-state', { players: room.players });
   });
@@ -101,6 +182,10 @@ io.on('connection', (socket) => {
     socket.playerName = name || 'Guest';
     const player = { id: socket.id, name: socket.playerName };
     await addPlayerToRoom(pin, player);
+
+    // Update room activity
+    updateRoomActivity(pin);
+
     // notify host
     io.to(pin).emit('player-joined', player);
     console.log(`Player ${socket.id} (${socket.playerName}) joined ${pin}`);
@@ -117,6 +202,9 @@ io.on('connection', (socket) => {
       console.error('Missing faces array in submission');
       return;
     }
+
+    // Update room activity on lantern submission
+    updateRoomActivity(pin);
 
     // Send to host only
     const lanternData = {

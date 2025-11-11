@@ -13,16 +13,52 @@
 
   let pin = null;
 
-  // Create room automatically when host opens the page
-  (async function createRoom() {
+  // Try to reconnect to existing room or create new one
+  (async function initRoom() {
+    // Check for existing PIN in sessionStorage
+    const savedPin = sessionStorage.getItem('host_room_pin');
+
+    if (savedPin) {
+      // Try to reconnect to existing room
+      console.log(`Attempting to reconnect to room ${savedPin}...`);
+      const checkRes = await fetch(`/check-room/${savedPin}`);
+      const checkData = await checkRes.json();
+
+      if (checkData.exists) {
+        // Room still exists, reconnect
+        pin = savedPin;
+        console.log(`✅ Reconnected to existing room ${pin}`);
+        displayRoomInfo(pin);
+        socket.emit('host-join', { pin });
+        return;
+      } else {
+        // Room no longer exists, clear saved PIN
+        console.log(`⚠️ Saved room ${savedPin} no longer exists, creating new room`);
+        sessionStorage.removeItem('host_room_pin');
+      }
+    }
+
+    // Create new room
     const res = await fetch('/create-room');
     const json = await res.json();
     pin = json.pin;
-    pinText.textContent = pin;
+
+    // Save PIN for reconnection
+    sessionStorage.setItem('host_room_pin', pin);
+
+    console.log(`✅ Created new room ${pin}`);
+    displayRoomInfo(pin);
+    socket.emit('host-join', { pin });
+  })();
+
+  // Function to display room info (PIN and QR code)
+  function displayRoomInfo(roomPin) {
+    pinText.textContent = roomPin;
     pinArea.style.display = 'block';
     const hostOverride = window.__QR_HOST_OVERRIDE__ || location.origin;
-    const joinUrl = `${hostOverride}/join/${pin}`;
+    const joinUrl = `${hostOverride}/join/${roomPin}`;
     qrcodeEl.innerHTML = '';
+
     // Generate QR as image using QRCode.toDataURL for better compatibility
     if (window.QRCode && QRCode.toDataURL) {
       QRCode.toDataURL(joinUrl, { width: 200 }).then((dataUrl) => {
@@ -37,9 +73,7 @@
       // fallback: show the URL
       qrcodeEl.textContent = joinUrl;
     }
-    // tell server we're host
-    socket.emit('host-join', { pin });
-  })();
+  }
 
   // maintain a simple list of player names shown inline (playersSpan may be absent)
   const players = new Map();
@@ -94,5 +128,12 @@
       s.players.forEach(p => players.set(p.id, p.name));
       refreshPlayersLine();
     }
+  });
+
+  // Handle room closed event
+  socket.on('room-closed', (data) => {
+    console.warn('Room closed:', data.message);
+    alert('Room closed: ' + data.message);
+    sessionStorage.removeItem('host_room_pin');
   });
 })();
