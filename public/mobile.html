@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Lantern Festival — Mobile</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+  <body class="mobile">
+    <div class="container">
+      <h1>Lantern — Mobile</h1>
+      <div id="status"></div>
+
+      <div>
+        <label for="shape">Lantern shape:</label>
+        <select id="shape">
+          <option value="cube">Cube (4 faces)</option>
+          <option value="cylinder">Cylinder (wrap)</option>
+        </select>
+      </div>
+
+      <div id="cubeFaces" style="margin-top:12px;">
+        <div class="face-row">
+          <div class="face">
+            <div class="face-label">Face 1</div>
+            <canvas class="face-canvas" data-face="0" width="240" height="240"></canvas>
+          </div>
+          <div class="face">
+            <div class="face-label">Face 2</div>
+            <canvas class="face-canvas" data-face="1" width="240" height="240"></canvas>
+          </div>
+        </div>
+        <div class="face-row">
+          <div class="face">
+            <div class="face-label">Face 3</div>
+            <canvas class="face-canvas" data-face="2" width="240" height="240"></canvas>
+          </div>
+          <div class="face">
+            <div class="face-label">Face 4</div>
+            <canvas class="face-canvas" data-face="3" width="240" height="240"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div id="cylinderFace" style="display:none;margin-top:12px;">
+        <div class="face-label">Cylinder Wrap</div>
+        <canvas id="cylinderCanvas" width="400" height="200"></canvas>
+      </div>
+
+      <div class="controls">
+        <input type="color" id="color" value="#ff6600">
+        <button id="clear">Clear</button>
+        <button id="submit">Submit Lantern</button>
+      </div>
+
+      <div id="anim" style="display:none;">
+        <p>Folding...</p>
+      </div>
+    </div>
+
+    <script src="/js/mobile.js"></script>
+  </body>
+</html>

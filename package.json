@@ -1,0 +1,16 @@
+{
+  "name": "lantern-festival",
+  "version": "0.1.0",
+  "description": "Minimal Lantern Festival lobby: host + mobile join via QR or PIN",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "redis": "^4.7.1",
+    "socket.io": "^4.7.2"
+  }
+}

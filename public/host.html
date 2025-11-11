@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Lantern Festival — Host</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+  <body>
+    <div class="lobby-background" aria-hidden="true"></div>
+    <div class="lobby">
+      <header class="lobby-header">
+        <div class="header-left">
+          <h1>Lantern Festival — Host</h1>
+          <div id="pinArea" style="display:none;">
+            <span>PIN: <strong id="pinText"></strong></span>
+          </div>
+        </div>
+        <div class="header-right">
+          <div id="qrcode"></div>
+        </div>
+      </header>
+
+      <main class="stage-main">
+        <canvas id="threeStage"></canvas>
+      </main>
+    </div>
+
+  <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.min.js"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    window.THREE = THREE;
+
+    // Load three-stage.js after THREE is available
+    const script = document.createElement('script');
+    script.src = '/js/three-stage.js';
+    document.body.appendChild(script);
+  </script>
+  <script src="/js/host.js"></script>
+  </body>
+</html>
