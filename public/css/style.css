@@ -1,7 +1,7 @@
 .lobby{min-height:100vh;padding:0}
-.lobby-header{display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,0.45);padding:14px 18px;border-radius:0;position:fixed;left:0;right:0;top:0;z-index:1;height:120px;backdrop-filter:blur(8px)}
+.lobby-header{display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,0.45);padding:14px 18px;border-radius:0;position:fixed;left:0;right:0;top:0;z-index:1;height:100px;backdrop-filter:blur(8px)}
 .header-left h1{margin:0;color:#fff}
-.header-right #qrcode img{width:128px;height:128px}
+.header-right #qrcode img{width:100px;height:100px}
 .players-line{display:none}
 .stage-main{display:block;padding-top:120px}
 .lantern-card img{width:80px;height:80px;object-fit:cover;margin-right:6px}
