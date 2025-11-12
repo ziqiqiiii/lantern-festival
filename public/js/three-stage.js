@@ -13,10 +13,14 @@
 
   window.LANTERN_CONFIG = {
     respawnCount: 3,
-    spawnRange: { x: [-6, 6], y: [-10, 15] },
-    speedRange: { y: [0.02, 0.04], rot: [0.01, 0.02] },
-    size: { width: 1, height: 1 },
-    maxLanterns: 500
+    spawnRange: { x: [-9, 9], y: [-10, 15] },
+    speedRange: { y: [0.01, 0.03], rot: [0.01, 0.015] },
+    size: { width: 1, height: 1.2 },
+    maxLanterns: 10,
+    // Fire and lighting effects toggle
+    enableFireEffects: true,  // Set to false to disable fire light and emissive glow
+    fireIntensity: 4,         // Base fire light intensity
+    emissiveIntensity: 0.7    // Material emissive glow intensity
   };
 
   const SHADOW_COLOR = 0x5a5a5a;
@@ -30,6 +34,7 @@
 
   let scene, camera, renderer;
   const lanterns = new Set();
+  const lanternQueue = []; // Queue for lanterns waiting to spawn
   let lastTime = 0;
 
   // ============================================================================
@@ -113,13 +118,14 @@
   }
 
   function createTextureMaterial(texture) {
+    const config = window.LANTERN_CONFIG;
     return new THREE.MeshPhongMaterial({
       map: texture,
       transparent: false,
       opacity: 0.95,
       shininess: 30,
-      emissive: FIRE_COLOR,
-      emissiveIntensity: 0.5,
+      emissive: config.enableFireEffects ? FIRE_COLOR : 0x000000,
+      emissiveIntensity: config.enableFireEffects ? config.emissiveIntensity : 0,
       side: THREE.DoubleSide
     });
   }
@@ -149,18 +155,23 @@
     const materials = createLanternMaterials(textures);
     const mesh = new THREE.Mesh(geometry, materials);
 
-    addFireLight(mesh);
+    // Add fire light only if enabled
+    if (window.LANTERN_CONFIG.enableFireEffects) {
+      addFireLight(mesh);
+    }
 
     return mesh;
   }
 
   function addFireLight(mesh) {
-    const fireLight = new THREE.PointLight(FIRE_COLOR, 2, 3);
-    fireLight.position.set(0, 0, 0);
+    const config = window.LANTERN_CONFIG;
+    const fireLight = new THREE.PointLight(FIRE_COLOR, config.fireIntensity, 5);
+    fireLight.position.set(0, 0, 0); // Center of the cube
     mesh.add(fireLight);
 
     mesh.userData.fireLight = fireLight;
     mesh.userData.lightPhase = Math.random() * Math.PI * 2;
+    mesh.userData.lightPhase2 = Math.random() * Math.PI * 2; // Second phase for more randomness
   }
 
   // ============================================================================
@@ -237,8 +248,8 @@
   // ============================================================================
 
   function spawnFromData(data) {
-    if (!isSceneReady()) {
-      console.warn('⚠️ Scene not ready or lantern limit reached');
+    if (!scene) {
+      console.warn('⚠️ Scene not ready');
       return;
     }
 
@@ -248,11 +259,27 @@
       return;
     }
 
-    loadTexturesAndSpawn(texUrls, data);
+    // Check if we can spawn immediately
+    if (lanterns.size < window.LANTERN_CONFIG.maxLanterns) {
+      loadTexturesAndSpawn(texUrls, data);
+    } else {
+      // Add to queue if limit reached
+      lanternQueue.push({ texUrls, data });
+      console.log(`🔄 Lantern queued. Queue size: ${lanternQueue.length}`);
+    }
   }
 
   function isSceneReady() {
     return scene && lanterns.size < window.LANTERN_CONFIG.maxLanterns;
+  }
+
+  function processQueue() {
+    // Try to spawn queued lanterns if space is available
+    while (lanternQueue.length > 0 && lanterns.size < window.LANTERN_CONFIG.maxLanterns) {
+      const queued = lanternQueue.shift();
+      console.log(`✨ Spawning queued lantern. Remaining in queue: ${lanternQueue.length}`);
+      loadTexturesAndSpawn(queued.texUrls, queued.data);
+    }
   }
 
   function isValidTextureData(texUrls) {
@@ -354,11 +381,18 @@
   function updateFireLight(lantern, delta) {
     if (!lantern.userData.fireLight) return;
 
-    lantern.userData.lightPhase += 0.05 * delta;
-    const flicker =
-      Math.sin(lantern.userData.lightPhase) * 0.3 +
-      Math.sin(lantern.userData.lightPhase * 2.3) * 0.2;
-    lantern.userData.fireLight.intensity = 2 + flicker;
+    const config = window.LANTERN_CONFIG;
+
+    // Enhanced realistic fire flickering with multiple frequencies
+    lantern.userData.lightPhase += 0.08 * delta;
+    lantern.userData.lightPhase2 += 0.12 * delta;
+
+    const flicker1 = Math.sin(lantern.userData.lightPhase) * 0.4;
+    const flicker2 = Math.sin(lantern.userData.lightPhase * 2.3) * 0.3;
+    const flicker3 = Math.sin(lantern.userData.lightPhase2 * 1.7) * 0.2;
+    const randomFlicker = (Math.random() - 0.5) * 0.15; // Add slight randomness
+
+    lantern.userData.fireLight.intensity = config.fireIntensity + flicker1 + flicker2 + flicker3 + randomFlicker;
   }
 
   function handleLanternRespawn(lantern) {
@@ -390,6 +424,9 @@
     scene.remove(lantern);
     lanterns.delete(lantern);
     disposeLanternResources(lantern);
+
+    // Process queue when a lantern is removed
+    processQueue();
   }
 
   function disposeLanternResources(lantern) {

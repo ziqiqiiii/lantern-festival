@@ -15,6 +15,16 @@
     for (const k in styles) el.style[k] = styles[k];
   }
 
+  // Helper to draw wood frame border
+  function drawWoodFrame(ctx, width, height) {
+    const borderWidth = 12;
+    const woodColor = '#8B4513'; // Saddle brown wood color
+
+    ctx.strokeStyle = woodColor;
+    ctx.lineWidth = borderWidth;
+    ctx.strokeRect(borderWidth / 2, borderWidth / 2, width - borderWidth, height - borderWidth);
+  }
+
   const faceCanvases = Array.from(document.querySelectorAll('.face-canvas'));
   const cylinderCanvas = document.getElementById('cylinderCanvas');
   const cubeFacesWrap = document.getElementById('cubeFaces');
@@ -22,17 +32,26 @@
   const dots = Array.from(document.querySelectorAll('.dot'));
 
   let currentFaceIndex = 0;
+  let currentBgColor = bgColorInput.value; // Track current background color
+
+  // Track background color for each face
+  const faceBgColors = [bgColorInput.value, bgColorInput.value, bgColorInput.value, bgColorInput.value];
+  let cylinderBgColor = bgColorInput.value;
 
   // initialize canvases with background
   const faceCtxs = faceCanvases.map(c => {
     const ctx = c.getContext('2d');
     ctx.fillStyle = bgColorInput.value;
     ctx.fillRect(0,0,c.width,c.height);
+    // Add wood frame border
+    drawWoodFrame(ctx, c.width, c.height);
     return ctx;
   });
   const cylCtx = cylinderCanvas.getContext('2d');
   cylCtx.fillStyle = bgColorInput.value;
   cylCtx.fillRect(0,0,cylinderCanvas.width,cylinderCanvas.height);
+  // Add wood frame border
+  drawWoodFrame(cylCtx, cylinderCanvas.width, cylinderCanvas.height);
 
   let activeCtx = faceCtxs[0];
   let drawing = false;
@@ -50,6 +69,9 @@
     currentFaceIndex = index;
     activeCtx = faceCtxs[index];
     faceLabel.textContent = `Face ${index + 1}`;
+
+    // Update color picker to match this face's background color
+    bgColorInput.value = faceBgColors[index];
   }
 
   prevBtn.addEventListener('click', () => {
@@ -153,10 +175,14 @@
       const ctx = faceCtxs[currentFaceIndex];
       ctx.fillStyle = bgColorInput.value;
       ctx.fillRect(0, 0, activeCanvas.width, activeCanvas.height);
+      // Re-draw wood frame
+      drawWoodFrame(ctx, activeCanvas.width, activeCanvas.height);
     } else {
       // Clear cylinder canvas
       cylCtx.fillStyle = bgColorInput.value;
       cylCtx.fillRect(0, 0, cylinderCanvas.width, cylinderCanvas.height);
+      // Re-draw wood frame
+      drawWoodFrame(cylCtx, cylinderCanvas.width, cylinderCanvas.height);
     }
   });
 
@@ -169,10 +195,20 @@
       const ctx = faceCtxs[currentFaceIndex];
       ctx.fillStyle = newBgColor;
       ctx.fillRect(0, 0, activeCanvas.width, activeCanvas.height);
+      // Re-draw wood frame
+      drawWoodFrame(ctx, activeCanvas.width, activeCanvas.height);
+
+      // Remember this face's background color
+      faceBgColors[currentFaceIndex] = newBgColor;
     } else {
       // Update cylinder canvas
       cylCtx.fillStyle = newBgColor;
       cylCtx.fillRect(0, 0, cylinderCanvas.width, cylinderCanvas.height);
+      // Re-draw wood frame
+      drawWoodFrame(cylCtx, cylinderCanvas.width, cylinderCanvas.height);
+
+      // Remember cylinder's background color
+      cylinderBgColor = newBgColor;
     }
   });
 
@@ -181,9 +217,13 @@
     if (s === 'cube') {
       cubeFacesWrap.style.display = 'block';
       cylinderWrap.style.display = 'none';
+      // Update color picker to current face's color
+      bgColorInput.value = faceBgColors[currentFaceIndex];
     } else {
       cubeFacesWrap.style.display = 'none';
       cylinderWrap.style.display = 'block';
+      // Update color picker to cylinder's color
+      bgColorInput.value = cylinderBgColor;
     }
   });
 
@@ -333,9 +373,9 @@
           // Float upward and fade the preview after a short display period
           const floatDelay = 1500;
           setTimeout(() => {
-            // animate overlay upward and fade
+            // animate overlay upward and fade - use viewport height for consistent off-screen animation
             scene.style.transition = 'transform 1.7s ease-in';
-            scene.style.transform = 'translateY(-200%) rotateX(-30deg) rotateY(-30deg)';
+            scene.style.transform = 'translateY(-150vh) rotateX(-30deg) rotateY(-30deg)';
             // cleanup after transition
             setTimeout(() => {
               if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
