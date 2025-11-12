@@ -9,11 +9,13 @@
   </head>
   <body class="mobile">
     <div class="container">
-      <h1>Lantern — Mobile</h1>
-      <div id="status"></div>
+      <div class="mobile-header">
+        <h1>🏮 Create Your Lantern</h1>
+        <div id="status" class="status-text"></div>
+      </div>
 
-      <div>
-        <label for="shape">Lantern shape:</label>
+      <div class="shape-selector">
+        <label for="shape">Lantern Shape:</label>
         <select id="shape">
           <option value="cube">Cube (4 faces)</option>
           <option value="cylinder">Cylinder (wrap)</option>
@@ -21,37 +23,49 @@
       </div>
 
       <div id="cubeFaces" style="margin-top:12px;">
-        <div class="face-row">
-          <div class="face">
-            <div class="face-label">Face 1</div>
-            <canvas class="face-canvas" data-face="0" width="240" height="240"></canvas>
-          </div>
-          <div class="face">
-            <div class="face-label">Face 2</div>
-            <canvas class="face-canvas" data-face="1" width="240" height="240"></canvas>
-          </div>
+        <div class="gallery-container">
+          <div class="face-label" id="faceLabel">Face 1</div>
+          <canvas class="face-canvas active" data-face="0" width="300" height="300"></canvas>
+          <canvas class="face-canvas" data-face="1" width="300" height="300" style="display:none;"></canvas>
+          <canvas class="face-canvas" data-face="2" width="300" height="300" style="display:none;"></canvas>
+          <canvas class="face-canvas" data-face="3" width="300" height="300" style="display:none;"></canvas>
         </div>
-        <div class="face-row">
-          <div class="face">
-            <div class="face-label">Face 3</div>
-            <canvas class="face-canvas" data-face="2" width="240" height="240"></canvas>
+
+        <div class="gallery-controls">
+          <button id="prevFace" class="nav-btn">&lt;</button>
+          <div class="dots">
+            <span class="dot active" data-index="0"></span>
+            <span class="dot" data-index="1"></span>
+            <span class="dot" data-index="2"></span>
+            <span class="dot" data-index="3"></span>
           </div>
-          <div class="face">
-            <div class="face-label">Face 4</div>
-            <canvas class="face-canvas" data-face="3" width="240" height="240"></canvas>
-          </div>
+          <button id="nextFace" class="nav-btn">&gt;</button>
         </div>
       </div>
 
       <div id="cylinderFace" style="display:none;margin-top:12px;">
-        <div class="face-label">Cylinder Wrap</div>
-        <canvas id="cylinderCanvas" width="400" height="200"></canvas>
+        <div class="gallery-container">
+          <div class="face-label">Cylinder Wrap</div>
+          <canvas id="cylinderCanvas" width="400" height="200"></canvas>
+        </div>
       </div>
 
-      <div class="controls">
-        <input type="color" id="color" value="#ff6600">
-        <button id="clear">Clear</button>
-        <button id="submit">Submit Lantern</button>
+      <div class="controls-panel">
+        <div class="color-controls">
+          <div class="color-item">
+            <label>✏️ Ink Color</label>
+            <input type="color" id="color" value="#000000">
+          </div>
+          <div class="color-item">
+            <label>🎨 Background</label>
+            <input type="color" id="bgColor" value="#F5DEB3">
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button id="clear" class="btn btn-secondary">Clear Current Face</button>
+          <button id="submit" class="btn btn-primary">🚀 Submit Lantern</button>
+        </div>
       </div>
 
       <div id="anim" style="display:none;">

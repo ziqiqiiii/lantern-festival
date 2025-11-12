@@ -57,20 +57,25 @@
     animate();
   }
 
-  function createLanternMesh(textures) {
+  function createLanternMesh(textures, bgColor) {
     const { width, height } = window.LANTERN_CONFIG.size;
     const geometry = new THREE.BoxGeometry(width, height, width);
 
     // BoxGeometry faces order: [right, left, top, bottom, front, back]
     // We have 4 face textures for cube sides: [front, right, back, left]
-    // Map them correctly and add simple materials for top/bottom
-    const baseMaterial = new THREE.MeshPhongMaterial({
-      color: 0xffd7a8,
+    // Map them correctly and use dark grey shadow for top/bottom
+
+    // Light shadow color for top/bottom faces
+    const shadowColor = new THREE.Color(0x5a5a5a);
+
+    const shadowMaterial = new THREE.MeshPhongMaterial({
+      color: shadowColor,
       transparent: true,
-      opacity: 0.9,
+      opacity: 0,
       shininess: 30,
-      emissive: 0xff6b1a,
-      emissiveIntensity: 0.6
+      emissive: 0x4a4a4a,
+      emissiveIntensity: 0.4,
+      side: THREE.DoubleSide
     });
 
     const materials = [
@@ -81,8 +86,9 @@
         opacity: 0.95,
         shininess: 30,
         emissive: 0xff6b1a,
-        emissiveIntensity: 0.5
-      }) : baseMaterial.clone(),
+        emissiveIntensity: 0.5,
+        side: THREE.DoubleSide
+      }) : shadowMaterial.clone(),
       // Left face (index 1) - use texture[3]
       textures[3] ? new THREE.MeshPhongMaterial({
         map: textures[3],
@@ -90,12 +96,13 @@
         opacity: 0.95,
         shininess: 30,
         emissive: 0xff6b1a,
-        emissiveIntensity: 0.5
-      }) : baseMaterial.clone(),
-      // Top face (index 2) - plain color
-      baseMaterial.clone(),
-      // Bottom face (index 3) - plain color
-      baseMaterial.clone(),
+        emissiveIntensity: 0.5,
+        side: THREE.DoubleSide
+      }) : shadowMaterial.clone(),
+      // Top face (index 2) - use dark grey shadow
+      shadowMaterial.clone(),
+      // Bottom face (index 3) - use dark grey shadow
+      shadowMaterial.clone(),
       // Front face (index 4) - use texture[0]
       textures[0] ? new THREE.MeshPhongMaterial({
         map: textures[0],
@@ -103,8 +110,9 @@
         opacity: 0.95,
         shininess: 30,
         emissive: 0xff6b1a,
-        emissiveIntensity: 0.5
-      }) : baseMaterial.clone(),
+        emissiveIntensity: 0.5,
+        side: THREE.DoubleSide
+      }) : shadowMaterial.clone(),
       // Back face (index 5) - use texture[2]
       textures[2] ? new THREE.MeshPhongMaterial({
         map: textures[2],
@@ -112,8 +120,9 @@
         opacity: 0.95,
         shininess: 30,
         emissive: 0xff6b1a,
-        emissiveIntensity: 0.5
-      }) : baseMaterial.clone()
+        emissiveIntensity: 0.5,
+        side: THREE.DoubleSide
+      }) : shadowMaterial.clone()
     ];
 
     const mesh = new THREE.Mesh(geometry, materials);
@@ -128,6 +137,66 @@
     mesh.userData.lightPhase = Math.random() * Math.PI * 2;
 
     return mesh;
+  }
+
+  // Create text sprite for name label
+  function createNameLabel(name) {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+
+    // Set canvas size - use a better aspect ratio
+    canvas.width = 120;  // Increased width for better text fit
+    canvas.height = 40;
+
+    // Clear canvas
+    context.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Create rounded rectangle
+    const cornerRadius = 10;
+    const padding = 8;
+
+    context.fillStyle = 'rgba(0, 0, 0, 0.6)';
+
+    // Draw rounded rectangle
+    context.beginPath();
+    context.moveTo(cornerRadius + padding, padding);
+    context.lineTo(canvas.width - cornerRadius - padding, padding);
+    context.quadraticCurveTo(canvas.width - padding, padding, canvas.width - padding, cornerRadius + padding);
+    context.lineTo(canvas.width - padding, canvas.height - cornerRadius - padding);
+    context.quadraticCurveTo(canvas.width - padding, canvas.height - padding, canvas.width - cornerRadius - padding, canvas.height - padding);
+    context.lineTo(cornerRadius + padding, canvas.height - padding);
+    context.quadraticCurveTo(padding, canvas.height - padding, padding, canvas.height - cornerRadius - padding);
+    context.lineTo(padding, cornerRadius + padding);
+    context.quadraticCurveTo(padding, padding, cornerRadius + padding, padding);
+    context.closePath();
+    context.fill();
+
+    // Style the text
+    context.fillStyle = '#ffffff';
+    context.font = 'bold 14px Arial, sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(name || 'Guest', canvas.width / 2, canvas.height / 2);
+
+    // Create texture
+    const texture = new THREE.CanvasTexture(canvas);
+
+    // Create sprite with PROPER aspect ratio
+    const spriteMaterial = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true
+    });
+
+    const sprite = new THREE.Sprite(spriteMaterial);
+
+    // Match sprite scale to canvas aspect ratio
+    const aspectRatio = canvas.width / canvas.height;
+    const height = 0.5; // Your desired height in 3D units
+    const width = height * aspectRatio;
+
+    sprite.scale.set(width, height, 1);
+
+    return sprite;
   }
 
   function spawnFromData(data) {
@@ -161,7 +230,7 @@
           })
       )
     ).then(textures => {
-      const mesh = createLanternMesh(textures);
+      const mesh = createLanternMesh(textures, data.bgColor);
       const { x, y } = window.LANTERN_CONFIG.spawnRange;
       mesh.position.set(x[0] + Math.random() * (x[1] - x[0]), y[0], (Math.random() - 0.5) * 2);
 
@@ -171,6 +240,14 @@
         vr: rotSpeed[0] + Math.random() * (rotSpeed[1] - rotSpeed[0]),
         spawnCount: 0
       };
+
+      // Add name label below the lantern
+      if (data.name) {
+        const nameLabel = createNameLabel(data.name);
+        nameLabel.position.set(0, -1, 0); // Position below the lantern
+        mesh.add(nameLabel);
+        mesh.userData.nameLabel = nameLabel;
+      }
 
       scene.add(mesh);
       lanterns.add(mesh);

@@ -2,9 +2,14 @@
   const socket = io();
   const status = document.getElementById('status');
   const colorInput = document.getElementById('color');
+  const bgColorInput = document.getElementById('bgColor');
   const clearBtn = document.getElementById('clear');
   const submitBtn = document.getElementById('submit');
   const shapeSelect = document.getElementById('shape');
+  const faceLabel = document.getElementById('faceLabel');
+  const prevBtn = document.getElementById('prevFace');
+  const nextBtn = document.getElementById('nextFace');
+
   // small helper to set multiple inline styles
   function setStyles(el, styles) {
     for (const k in styles) el.style[k] = styles[k];
@@ -14,57 +19,161 @@
   const cylinderCanvas = document.getElementById('cylinderCanvas');
   const cubeFacesWrap = document.getElementById('cubeFaces');
   const cylinderWrap = document.getElementById('cylinderFace');
+  const dots = Array.from(document.querySelectorAll('.dot'));
 
-  // initialize canvases with white background
+  let currentFaceIndex = 0;
+
+  // initialize canvases with background
   const faceCtxs = faceCanvases.map(c => {
     const ctx = c.getContext('2d');
-    ctx.fillStyle = '#F5DEB3';
+    ctx.fillStyle = bgColorInput.value;
     ctx.fillRect(0,0,c.width,c.height);
     return ctx;
   });
   const cylCtx = cylinderCanvas.getContext('2d');
-  cylCtx.fillStyle = '#F5DEB3';
+  cylCtx.fillStyle = bgColorInput.value;
   cylCtx.fillRect(0,0,cylinderCanvas.width,cylinderCanvas.height);
 
   let activeCtx = faceCtxs[0];
   let drawing = false;
+  let lastX = 0;
+  let lastY = 0;
+
+  // Gallery navigation
+  function showFace(index) {
+    faceCanvases.forEach((c, i) => {
+      c.style.display = i === index ? 'block' : 'none';
+    });
+    dots.forEach((d, i) => {
+      d.classList.toggle('active', i === index);
+    });
+    currentFaceIndex = index;
+    activeCtx = faceCtxs[index];
+    faceLabel.textContent = `Face ${index + 1}`;
+  }
+
+  prevBtn.addEventListener('click', () => {
+    const newIndex = (currentFaceIndex - 1 + 4) % 4;
+    showFace(newIndex);
+  });
+
+  nextBtn.addEventListener('click', () => {
+    const newIndex = (currentFaceIndex + 1) % 4;
+    showFace(newIndex);
+  });
+
+  dots.forEach((dot, index) => {
+    dot.addEventListener('click', () => {
+      showFace(index);
+    });
+  });
 
   function setActiveFace(index) {
     activeCtx = faceCtxs[index];
-    // highlight UI maybe
   }
 
-  // pointer events for each face canvas
-  faceCanvases.forEach((c, idx) => {
-    c.addEventListener('pointerdown', (e) => { drawing = true; drawOn(e, c); setActiveFace(idx); });
-    c.addEventListener('pointermove', (e) => { if (drawing) drawOn(e, c); });
-    c.addEventListener('pointerup', () => drawing = false);
-    c.addEventListener('pointerleave', () => drawing = false);
-  });
-  // cylinder
-  cylinderCanvas.addEventListener('pointerdown', (e) => { drawing = true; drawOn(e, cylinderCanvas); activeCtx = cylCtx; });
-  cylinderCanvas.addEventListener('pointermove', (e) => { if (drawing) drawOn(e, cylinderCanvas); });
-  cylinderCanvas.addEventListener('pointerup', () => drawing = false);
-  cylinderCanvas.addEventListener('pointerleave', () => drawing = false);
-
-  function drawOn(e, canvasEl) {
+  // Get coordinates from event (mouse or touch)
+  function getCoords(e, canvasEl) {
     const rect = canvasEl.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: (clientX - rect.left) * (canvasEl.width / rect.width),
+      y: (clientY - rect.top) * (canvasEl.height / rect.height)
+    };
+  }
+
+  function startDrawing(e, canvasEl) {
+    e.preventDefault();
+    drawing = true;
+    const coords = getCoords(e, canvasEl);
+    lastX = coords.x;
+    lastY = coords.y;
     const ctx = canvasEl === cylinderCanvas ? cylCtx : canvasEl.getContext('2d');
     ctx.fillStyle = colorInput.value;
     ctx.beginPath();
-    ctx.arc(x, y, 6, 0, Math.PI*2);
+    ctx.arc(coords.x, coords.y, 6, 0, Math.PI*2);
     ctx.fill();
   }
 
+  function draw(e, canvasEl) {
+    if (!drawing) return;
+    e.preventDefault();
+    const coords = getCoords(e, canvasEl);
+    const ctx = canvasEl === cylinderCanvas ? cylCtx : canvasEl.getContext('2d');
+
+    // Draw line from last position to current
+    ctx.strokeStyle = colorInput.value;
+    ctx.lineWidth = 12;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(coords.x, coords.y);
+    ctx.stroke();
+
+    lastX = coords.x;
+    lastY = coords.y;
+  }
+
+  function stopDrawing() {
+    drawing = false;
+  }
+
+  // Touch and mouse events for cube faces
+  faceCanvases.forEach((c, idx) => {
+    // Touch events
+    c.addEventListener('touchstart', (e) => { startDrawing(e, c); setActiveFace(idx); });
+    c.addEventListener('touchmove', (e) => { draw(e, c); });
+    c.addEventListener('touchend', stopDrawing);
+    c.addEventListener('touchcancel', stopDrawing);
+
+    // Mouse events
+    c.addEventListener('mousedown', (e) => { startDrawing(e, c); setActiveFace(idx); });
+    c.addEventListener('mousemove', (e) => { draw(e, c); });
+    c.addEventListener('mouseup', stopDrawing);
+    c.addEventListener('mouseleave', stopDrawing);
+  });
+
+  // Touch and mouse events for cylinder
+  cylinderCanvas.addEventListener('touchstart', (e) => { startDrawing(e, cylinderCanvas); activeCtx = cylCtx; });
+  cylinderCanvas.addEventListener('touchmove', (e) => { draw(e, cylinderCanvas); });
+  cylinderCanvas.addEventListener('touchend', stopDrawing);
+  cylinderCanvas.addEventListener('touchcancel', stopDrawing);
+
+  cylinderCanvas.addEventListener('mousedown', (e) => { startDrawing(e, cylinderCanvas); activeCtx = cylCtx; });
+  cylinderCanvas.addEventListener('mousemove', (e) => { draw(e, cylinderCanvas); });
+  cylinderCanvas.addEventListener('mouseup', stopDrawing);
+  cylinderCanvas.addEventListener('mouseleave', stopDrawing);
+
   clearBtn.addEventListener('click', () => {
-    faceCanvases.forEach((c, i) => {
-      faceCtxs[i].fillStyle = '#F5DEB3';  // Match initial background color
-      faceCtxs[i].fillRect(0,0,c.width,c.height);
-    });
-    cylCtx.fillStyle = '#F5DEB3';  // Match initial background color
-    cylCtx.fillRect(0,0,cylinderCanvas.width,cylinderCanvas.height);
+    if (shapeSelect.value === 'cube') {
+      // Clear only the currently active face
+      const activeCanvas = faceCanvases[currentFaceIndex];
+      const ctx = faceCtxs[currentFaceIndex];
+      ctx.fillStyle = bgColorInput.value;
+      ctx.fillRect(0, 0, activeCanvas.width, activeCanvas.height);
+    } else {
+      // Clear cylinder canvas
+      cylCtx.fillStyle = bgColorInput.value;
+      cylCtx.fillRect(0, 0, cylinderCanvas.width, cylinderCanvas.height);
+    }
+  });
+
+  // Update background color for all canvases when changed
+  bgColorInput.addEventListener('change', () => {
+    const newBgColor = bgColorInput.value;
+    if (shapeSelect.value === 'cube') {
+      // Only update the currently active face canvas
+      const activeCanvas = faceCanvases[currentFaceIndex];
+      const ctx = faceCtxs[currentFaceIndex];
+      ctx.fillStyle = newBgColor;
+      ctx.fillRect(0, 0, activeCanvas.width, activeCanvas.height);
+    } else {
+      // Update cylinder canvas
+      cylCtx.fillStyle = newBgColor;
+      cylCtx.fillRect(0, 0, cylinderCanvas.width, cylinderCanvas.height);
+    }
   });
 
   shapeSelect.addEventListener('change', () => {
@@ -86,12 +195,21 @@
     return qp;
   }
 
+  // Get name from query string or sessionStorage
+  function getName() {
+    const qp = new URLSearchParams(location.search).get('name');
+    if (qp) return qp;
+    return sessionStorage.getItem('lantern_name') || 'Guest';
+  }
+
   const pin = getPin();
+  const playerName = getName();
+
   if (!pin) {
     status.textContent = 'No PIN provided in URL.';
   } else {
     status.textContent = `Joining room ${pin}...`;
-    socket.emit('join-room', { pin, name: 'Phone' });
+    socket.emit('join-room', { pin, name: playerName });
     status.textContent = `Joined ${pin}. Draw your lantern and submit.`;
   }
 
@@ -263,12 +381,13 @@
       pin,
       shape,
       faceCount: faces.length,
+      bgColor: bgColorInput.value,
       sampleFace: faces[0]?.substring(0, 50),
-      totalSize: JSON.stringify({ pin, shape, faces }).length
+      totalSize: JSON.stringify({ pin, shape, faces, bgColor: bgColorInput.value }).length
     });
 
-    // Send the data
-    socket.emit('submit-lantern', { pin, shape, faces });
+    // Send the data with background color
+    socket.emit('submit-lantern', { pin, shape, faces, bgColor: bgColorInput.value });
     status.textContent = 'Lantern submitted — it should appear on the host screen soon.';
   });
 })();

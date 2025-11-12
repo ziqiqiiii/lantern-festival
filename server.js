@@ -110,6 +110,11 @@ app.get('/create-room', async (req, res) => {
   res.json({ pin });
 });
 
+// Redirect root to host page
+app.get('/', (req, res) => {
+  res.redirect('/host.html');
+});
+
 // Check if room exists (for host reconnection)
 app.get('/check-room/:pin', (req, res) => {
   const { pin } = req.params;
