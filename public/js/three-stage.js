@@ -18,7 +18,7 @@
     size: { width: 1, height: 1.2 },
     maxLanterns: 10,
     // Fire and lighting effects toggle
-    enableFireEffects: true,  // Set to false to disable fire light and emissive glow
+    enableFireEffects: false,  // Set to false to disable fire light and emissive glow
     fireIntensity: 4,         // Base fire light intensity
     emissiveIntensity: 0.7    // Material emissive glow intensity
   };
@@ -149,10 +149,29 @@
   // LANTERN MESH CREATION
   // ============================================================================
 
-  function createLanternMesh(textures, bgColor) {
+  function createLanternMesh(textures, bgColor, shape) {
     const { width, height } = window.LANTERN_CONFIG.size;
-    const geometry = new THREE.BoxGeometry(width, height, width);
-    const materials = createLanternMaterials(textures);
+    let geometry, materials;
+
+    if (shape === 'cylinder') {
+      // Create cylinder geometry
+      const radius = width / 2;
+      const radialSegments = 32; // Smooth cylinder
+      geometry = new THREE.CylinderGeometry(radius, radius, height, radialSegments);
+
+      // For cylinder: wrap texture around sides, shadow material for top/bottom
+      const shadowMaterial = createShadowMaterial();
+      materials = [
+        createTextureMaterial(textures[0]), // Side (wrap around)
+        shadowMaterial.clone(), // Top cap
+        shadowMaterial.clone()  // Bottom cap
+      ];
+    } else {
+      // Create cube geometry (default)
+      geometry = new THREE.BoxGeometry(width, height, width);
+      materials = createLanternMaterials(textures);
+    }
+
     const mesh = new THREE.Mesh(geometry, materials);
 
     // Add fire light only if enabled
@@ -291,7 +310,7 @@
     const texturePromises = texUrls.map(url => loadSingleTexture(loader, url));
 
     Promise.all(texturePromises).then(textures => {
-      const mesh = createLanternMesh(textures, data.bgColor);
+      const mesh = createLanternMesh(textures, data.bgColor, data.shape);
       initializeLanternTransform(mesh);
       addNameLabelIfPresent(mesh, data.name);
       addLanternToScene(mesh);
