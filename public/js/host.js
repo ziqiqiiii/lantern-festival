@@ -1,7 +1,6 @@
 // Optional: Override QR code URL for LAN testing
 // Set this in browser console if needed: window.__QR_HOST_OVERRIDE__ = 'http://YOUR_IP:3000'
-// window.__QR_HOST_OVERRIDE__ = 'http://10.195.41.191:3000';
-window.__QR_HOST_OVERRIDE__ = 'http://192.168.1.236:3000';
+window.__QR_HOST_OVERRIDE__ = 'http://10.195.41.191:3000';
 
 (() => {
   const socket = io();
