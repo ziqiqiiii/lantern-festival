@@ -313,15 +313,6 @@
       setStyles(container, { position: 'relative', width: '320px', height: '240px', perspective: '1000px' });
       overlay.appendChild(container);
 
-      const msg = document.createElement('div');
-      msg.textContent = 'Preparing preview...';
-      setStyles(msg, {
-        color: '#fff', fontFamily: 'sans-serif', fontSize: '16px', position: 'absolute',
-        top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', transition: 'opacity 0.3s',
-        zIndex: '10' // Ensure message appears above scene
-      });
-      container.appendChild(msg);
-
       if (shape === 'cube') {
         const scene = document.createElement('div');
         setStyles(scene, { width: '100%', height: '100%', position: 'absolute', top: '0', left: '0', transformStyle: 'preserve-3d', transition: 'transform 1.5s ease-in-out', opacity: '0' });
@@ -395,8 +386,7 @@
 
         // Start animation after a short delay
         setTimeout(() => {
-          msg.style.opacity = '0';
-          scene.style.opacity = '1'; // Fade in scene as message fades out
+          scene.style.opacity = '1'; // Fade in scene
 
           // Set front-down orthogonal perspective (user-preferred view)
           // keep scene transform steady while folding
@@ -489,8 +479,6 @@
 
         // Start animation
         setTimeout(() => {
-          msg.style.opacity = '0';
-
           // Set initial 3D perspective
           scene.style.transform = 'translateX(110px) translateZ(-160px) rotateX(-25deg) rotateY(25deg)';
 
@@ -557,7 +545,7 @@
               }, 1500);
             }, 2800);
           };
-          
+
           // Start rolling immediately (no extra delay)
           startRolling();
         }, 100);

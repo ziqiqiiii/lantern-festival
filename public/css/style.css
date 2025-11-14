@@ -250,6 +250,32 @@ body.mobile {
   border-radius: 50%;
 }
 
+.trash-btn {
+  width: 60px;
+  height: 60px;
+  border: 3px solid #DC143C;
+  border-radius: 50%;
+  background: white;
+  font-size: 28px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  padding: 0;
+}
+
+.trash-btn:hover {
+  background: #FFF5E6;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(220, 20, 60, 0.3);
+}
+
+.trash-btn:active {
+  transform: scale(0.95);
+}
+
 .action-buttons {
   display: flex;
   flex-direction: column;
