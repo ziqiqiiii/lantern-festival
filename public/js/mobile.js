@@ -16,13 +16,28 @@
   }
 
   // Helper to draw wood frame border
-  function drawWoodFrame(ctx, width, height) {
+  function drawWoodFrame(ctx, width, height, isCylinder = false) {
     const borderWidth = 12;
     const woodColor = '#8B4513'; // Saddle brown wood color
 
     ctx.strokeStyle = woodColor;
     ctx.lineWidth = borderWidth;
-    ctx.strokeRect(borderWidth / 2, borderWidth / 2, width - borderWidth, height - borderWidth);
+
+    if (isCylinder) {
+      // For cylinder: only draw top and bottom borders
+      ctx.beginPath();
+      ctx.moveTo(0, borderWidth / 2);
+      ctx.lineTo(width, borderWidth / 2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(0, height - borderWidth / 2);
+      ctx.lineTo(width, height - borderWidth / 2);
+      ctx.stroke();
+    } else {
+      // For cube: draw full rectangle
+      ctx.strokeRect(borderWidth / 2, borderWidth / 2, width - borderWidth, height - borderWidth);
+    }
   }
 
   const faceCanvases = Array.from(document.querySelectorAll('.face-canvas'));
@@ -34,24 +49,50 @@
   let currentFaceIndex = 0;
   let currentBgColor = bgColorInput.value; // Track current background color
 
-  // Track background color for each face
-  const faceBgColors = [bgColorInput.value, bgColorInput.value, bgColorInput.value, bgColorInput.value];
-  let cylinderBgColor = bgColorInput.value;
+  // Default wheat color - always reset to this on page refresh
+  const DEFAULT_BG_COLOR = '#F5DEB3';
 
-  // initialize canvases with background
+  // Track background color for each face (always start with default)
+  const faceBgColors = [DEFAULT_BG_COLOR, DEFAULT_BG_COLOR, DEFAULT_BG_COLOR, DEFAULT_BG_COLOR];
+  let cylinderBgColor = DEFAULT_BG_COLOR;
+
+  // Restore saved shape selection from sessionStorage
+  const savedShape = sessionStorage.getItem('lantern_shape');
+  if (savedShape && (savedShape === 'cube' || savedShape === 'cylinder')) {
+    shapeSelect.value = savedShape;
+  }
+
+  // Initialize the correct canvas based on saved or default shape
+  function initializeShapeDisplay() {
+    const shape = shapeSelect.value;
+    if (shape === 'cube') {
+      cubeFacesWrap.style.display = 'block';
+      cylinderWrap.style.display = 'none';
+      bgColorInput.value = faceBgColors[currentFaceIndex];
+    } else {
+      cubeFacesWrap.style.display = 'none';
+      cylinderWrap.style.display = 'block';
+      bgColorInput.value = cylinderBgColor;
+    }
+  }
+
+  // Call initialization
+  initializeShapeDisplay();
+
+  // initialize canvases with default background color
   const faceCtxs = faceCanvases.map(c => {
     const ctx = c.getContext('2d');
-    ctx.fillStyle = bgColorInput.value;
+    ctx.fillStyle = DEFAULT_BG_COLOR;
     ctx.fillRect(0,0,c.width,c.height);
     // Add wood frame border
     drawWoodFrame(ctx, c.width, c.height);
     return ctx;
   });
   const cylCtx = cylinderCanvas.getContext('2d');
-  cylCtx.fillStyle = bgColorInput.value;
+  cylCtx.fillStyle = DEFAULT_BG_COLOR;
   cylCtx.fillRect(0,0,cylinderCanvas.width,cylinderCanvas.height);
-  // Add wood frame border
-  drawWoodFrame(cylCtx, cylinderCanvas.width, cylinderCanvas.height);
+  // Add wood frame border (cylinder mode)
+  drawWoodFrame(cylCtx, cylinderCanvas.width, cylinderCanvas.height, true);
 
   let activeCtx = faceCtxs[0];
   let drawing = false;
@@ -181,8 +222,8 @@
       // Clear cylinder canvas
       cylCtx.fillStyle = bgColorInput.value;
       cylCtx.fillRect(0, 0, cylinderCanvas.width, cylinderCanvas.height);
-      // Re-draw wood frame
-      drawWoodFrame(cylCtx, cylinderCanvas.width, cylinderCanvas.height);
+      // Re-draw wood frame (cylinder mode)
+      drawWoodFrame(cylCtx, cylinderCanvas.width, cylinderCanvas.height, true);
     }
   });
 
@@ -204,8 +245,8 @@
       // Update cylinder canvas
       cylCtx.fillStyle = newBgColor;
       cylCtx.fillRect(0, 0, cylinderCanvas.width, cylinderCanvas.height);
-      // Re-draw wood frame
-      drawWoodFrame(cylCtx, cylinderCanvas.width, cylinderCanvas.height);
+      // Re-draw wood frame (cylinder mode)
+      drawWoodFrame(cylCtx, cylinderCanvas.width, cylinderCanvas.height, true);
 
       // Remember cylinder's background color
       cylinderBgColor = newBgColor;
@@ -214,6 +255,9 @@
 
   shapeSelect.addEventListener('change', () => {
     const s = shapeSelect.value;
+    // Save shape selection to sessionStorage
+    sessionStorage.setItem('lantern_shape', s);
+
     if (s === 'cube') {
       cubeFacesWrap.style.display = 'block';
       cylinderWrap.style.display = 'none';
@@ -273,14 +317,15 @@
       msg.textContent = 'Preparing preview...';
       setStyles(msg, {
         color: '#fff', fontFamily: 'sans-serif', fontSize: '16px', position: 'absolute',
-        top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', transition: 'opacity 0.3s'
+        top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', transition: 'opacity 0.3s',
+        zIndex: '10' // Ensure message appears above scene
       });
       container.appendChild(msg);
 
       if (shape === 'cube') {
-  const scene = document.createElement('div');
-  setStyles(scene, { width: '100%', height: '100%', position: 'relative', transformStyle: 'preserve-3d', transition: 'transform 1.5s ease-in-out' });
-  container.appendChild(scene);
+        const scene = document.createElement('div');
+        setStyles(scene, { width: '100%', height: '100%', position: 'absolute', top: '0', left: '0', transformStyle: 'preserve-3d', transition: 'transform 1.5s ease-in-out', opacity: '0' });
+        container.appendChild(scene);
 
         const size = 150; // pixels
         const centerIndex = 2; // user mapping: 0=back,1=left,2=front,3=right -> center on front (index 2)
@@ -351,10 +396,11 @@
         // Start animation after a short delay
         setTimeout(() => {
           msg.style.opacity = '0';
+          scene.style.opacity = '1'; // Fade in scene as message fades out
 
           // Set front-down orthogonal perspective (user-preferred view)
           // keep scene transform steady while folding
-          scene.style.transform = 'translateZ(-160px) rotateX(-40deg) rotateY(-40deg)';
+          scene.style.transform = 'translateX(80px) translateY(80px) translateZ(-160px) rotateX(-40deg) rotateY(-40deg)';
 
           // PHASE 1: Fold left face (index 0 in current layout)
           faces[0].style.transformOrigin = 'right center';
@@ -375,7 +421,7 @@
           setTimeout(() => {
             // animate overlay upward and fade - use viewport height for consistent off-screen animation
             scene.style.transition = 'transform 1.7s ease-in';
-            scene.style.transform = 'translateY(-150vh) rotateX(-30deg) rotateY(-30deg)';
+            scene.style.transform = 'translateY(-150vh) rotateX(-25deg) rotateY(-25deg)';
             // cleanup after transition
             setTimeout(() => {
               if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
@@ -386,14 +432,135 @@
         }, 100);
 
       } else {
-        // Simple fade out for cylinder
+        // Cylinder rolling animation - paper curling effect
+        const scene = document.createElement('div');
+        setStyles(scene, {
+          width: '100%', height: '100%', position: 'relative',
+          transformStyle: 'preserve-3d',
+          transition: 'transform 1.5s ease-in-out'
+        });
+        container.appendChild(scene);
+
+        const cylinderWidth = 400;  // Increased from 280 for larger cylinder
+        const cylinderHeight = 200; // Increased from 140 for larger cylinder
+
+        // Create multiple thin vertical strips for smooth rolling
+        // Optimal: 60-80 strips for smooth appearance without performance issues
+        const numStrips = 60;
+        const stripWidth = (cylinderWidth / numStrips) * 1.01; // Slight overlap to eliminate gaps
+        const stripSpacing = cylinderWidth / numStrips; // Actual spacing between strip positions
+        const radius = cylinderWidth / (2 * Math.PI);
+
+        const wrapper = document.createElement('div');
+        setStyles(wrapper, {
+          position: 'absolute',
+          left: '50%',
+          top: '0%',
+          width: cylinderWidth + 'px',
+          height: cylinderHeight + 'px',
+          transformStyle: 'preserve-3d',
+          transform: 'translate(-50%, -50%)',
+          transition: 'transform 2s ease-in-out'
+        });
+        scene.appendChild(wrapper);
+
+        // Create strips that will curl into a cylinder
+        for (let i = 0; i < numStrips; i++) {
+          const strip = document.createElement('div');
+          const xPos = i * stripSpacing; // Use spacing for positioning
+
+          setStyles(strip, {
+            position: 'absolute',
+            left: '0', // All start at left edge
+            top: '0',
+            width: stripWidth * 1.2 + 'px', // Slightly wider for overlap
+            height: cylinderHeight + 'px',
+            backgroundImage: `url(${facesDataUrls[0]})`,
+            backgroundSize: cylinderWidth + 'px ' + cylinderHeight + 'px',
+            backgroundPosition: `-${xPos}px 0`,
+            transformStyle: 'preserve-3d',
+            transformOrigin: 'center center',
+            transform: `translateX(${xPos}px)`, // Initially laid out flat in a line
+            transition: 'transform 1.5s ease-out',
+            transitionDelay: `${i * 0.005}s` // Faster stagger for more strips
+          });
+          wrapper.appendChild(strip);
+        }
+
+        // Start animation
         setTimeout(() => {
           msg.style.opacity = '0';
-          setTimeout(() => {
-            overlay.remove();
-            resolve();
-          }, 500);
-        }, 500);
+
+          // Set initial 3D perspective
+          scene.style.transform = 'translateX(110px) translateZ(-160px) rotateX(-25deg) rotateY(25deg)';
+
+          // Roll each strip into position to form a cylinder (start immediately like cube)
+          const startRolling = () => {
+            const strips = wrapper.children;
+            const halfPoint = numStrips / 2;
+
+            // Build cylinder by connecting strips continuously like paper
+            let cumulativeX = 0;
+            let cumulativeZ = 0;
+
+            for (let i = 0; i < strips.length; i++) {
+              const strip = strips[i];
+
+              // Calculate angle for this strip
+              let angle;
+              if (i <= halfPoint) {
+                const distanceFromCenter = halfPoint - i;
+                angle = (distanceFromCenter / halfPoint) * 180;
+              } else {
+                const distanceFromCenter = i - halfPoint;
+                angle = -(distanceFromCenter / halfPoint) * 180;
+              }
+
+              // Calculate angle change from previous strip
+              const prevAngle = i === 0 ? angle :
+                (i <= halfPoint ?
+                  ((halfPoint - (i-1)) / halfPoint) * 180 :
+                  -((i-1 - halfPoint) / halfPoint) * 180);
+
+              const angleStep = angle - prevAngle;
+              const thetaStep = (angleStep * Math.PI) / 180;
+
+              // Add the arc displacement from previous strip
+              // This ensures strips stay connected like paper
+              if (i > 0) {
+                cumulativeX += stripSpacing * Math.cos(prevAngle * Math.PI / 180);
+                cumulativeZ += stripSpacing * Math.sin(prevAngle * Math.PI / 180);
+              }
+
+              // Transform: use cumulative position to maintain connectivity
+              strip.style.transform = `translate3d(${cumulativeX}px, 0, ${cumulativeZ}px) rotateY(${-angle}deg)`;
+            }
+
+            // Simple shift and float animation
+            setTimeout(() => {
+              // Set smooth transition
+              wrapper.style.transition = 'transform 2s ease-in-out';
+              scene.style.transition = 'transform 2s ease-in-out';
+
+              // Simple rotation to show the cylinder - adjust perspective for larger cylinder
+              scene.style.transform = 'translateX(120px) translateZ(-160px) rotateX(-25deg) rotateY(35deg)'; // Moved back for better view
+            }, 800);
+
+            // Float away smoothly
+            setTimeout(() => {
+              scene.style.transition = 'transform 2s ease-in';
+              scene.style.transform = 'translateX(120px) translateY(-150vh) rotateX(15deg) rotateY(90deg)';
+
+              setTimeout(() => {
+                if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                resolve();
+              }, 1500);
+            }, 2800);
+          };
+          
+          // Start rolling immediately (no extra delay)
+          startRolling();
+        }, 100);
       }
     });
   }
