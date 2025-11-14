@@ -154,6 +154,87 @@ async function removePlayerFromRoom(pin, socketId) {
   }
 }
 
+// === QWEN / Visual LLM configuration ===
+const QWEN_BASE_URL = process.env.QWEN_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+const QWEN_API_KEY = process.env.QWEN_API_KEY || null;
+
+// Call the Qwen3-VL model directly with images and a user prompt.
+// Expects 'faces' to be an array of data URLs (data:image/png;base64,...).
+async function analyzeWithQWEN({ faces, shape, name }) {
+  if (!QWEN_API_KEY) {
+    console.log('QWEN_API_KEY not set — skipping visual analysis.');
+    return null;
+  }
+  if (!faces || !faces.length) return null;
+  if (typeof fetch === 'undefined') {
+    console.warn('Global fetch not available. Install node 18+ or provide a fetch polyfill.');
+    return null;
+  }
+
+  try {
+    // Build message content: one image_url item per face followed by the task prompt.
+    const content = [];
+    for (const f of faces) {
+      content.push({ type: 'image_url', image_url: { url: f } });
+    }
+    content.push({
+      type: 'text',
+      text: `Please generate a short story (around 80-120 words) based on the lantern images above. Relate the story to the history and cultural traditions of the Lantern Festival. Reply in clear English as plain text only.`
+    });
+
+    const payload = {
+      model: 'qwen3-vl-plus',
+      messages: [
+        { role: 'user', content }
+      ],
+      temperature: 0.7,
+      max_tokens: 400
+    };
+
+    const res = await fetch(`${QWEN_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${QWEN_API_KEY}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error('QWEN response error', res.status, txt);
+      return null;
+    }
+
+    const json = await res.json();
+
+    // Extract text from common qwen response shapes
+    let story = null;
+    if (Array.isArray(json.choices) && json.choices.length) {
+      const choice = json.choices[0];
+      const msg = choice.message || choice;
+      const content = msg.content || msg;
+      if (Array.isArray(content)) {
+        // find first text segment
+        const seg = content.find(c => c.type === 'text' || c.type === 'output_text' || typeof c.text === 'string');
+        if (seg) story = seg.text || seg.content || seg.output_text || null;
+      } else if (typeof content === 'string') {
+        story = content;
+      } else if (choice.text) {
+        story = choice.text;
+      }
+    }
+
+    if (!story && json.output) story = typeof json.output === 'string' ? json.output : (json.output?.text || null);
+    if (!story && json.story) story = json.story;
+
+    return story ? story.trim() : null;
+  } catch (err) {
+    console.error('QWEN call failed:', err);
+    return null;
+  }
+}
+
 io.on('connection', (socket) => {
   console.log('socket connected', socket.id);
 
@@ -196,37 +277,39 @@ io.on('connection', (socket) => {
     console.log(`Player ${socket.id} (${socket.playerName}) joined ${pin}`);
   });
 
-  socket.on('submit-lantern', (data) => {
+  // Make the submit handler async so we can await visual analysis
+  socket.on('submit-lantern', async (data) => {
     console.log('Socket data size:', JSON.stringify(data).length);
-    // data: { pin, imageDataUrl, shape, faces }
     const { pin, shape, faces } = data;
     if (!pin) return;
 
-    // Verify we have the faces data
     if (!faces || !Array.isArray(faces)) {
       console.error('Missing faces array in submission');
       return;
     }
 
-    // Update room activity on lantern submission
     updateRoomActivity(pin);
 
-    // Send to host only
     const lanternData = {
       id: socket.id,
       name: socket.playerName,
       shape,
-      faces: faces
+      faces: faces,
+      bgColor: data.bgColor || null
     };
 
-    // Log size of data being forwarded
-    console.log('Forwarding lantern:', {
-      id: socket.id,
-      pin,
-      shape,
-      facesReceived: faces.length,
-      dataSize: JSON.stringify(lanternData).length
-    });
+    // Direct Qwen3-VL call using API key
+    try {
+      const story = await analyzeWithQWEN({ faces, shape, name: socket.playerName });
+      if (story) {
+        lanternData.story = story;
+        console.log('QWEN story generated for lantern:', { id: socket.id, pin, preview: story.slice(0, 120) });
+      } else {
+        console.log('No story returned from QWEN for lantern', { id: socket.id, pin });
+      }
+    } catch (err) {
+      console.error('Error during QWEN analysis:', err);
+    }
 
     io.to(pin).emit('new-lantern', lanternData);
     console.log(`Lantern from ${socket.id} forwarded to host in ${pin}`);

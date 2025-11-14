@@ -108,7 +108,41 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.41.191:3000';
     if (window.spawnLanternOnStage) {
       window.spawnLanternOnStage(data);
     }
+
+    // If the MCP produced a story, show it briefly on the host screen
+    if (data.story) {
+      showLanternStory(data.story, data.name);
+    }
   });
+
+  // Simple ephemeral story overlay
+  function showLanternStory(text, author) {
+    try {
+      const overlay = document.createElement('div');
+      overlay.style.position = 'fixed';
+      overlay.style.left = '50%';
+      overlay.style.top = '10%';
+      overlay.style.transform = 'translateX(-50%)';
+      overlay.style.background = 'rgba(0,0,0,0.75)';
+      overlay.style.color = 'white';
+      overlay.style.padding = '14px 18px';
+      overlay.style.borderRadius = '10px';
+      overlay.style.zIndex = 9999;
+      overlay.style.maxWidth = '70%';
+      overlay.style.boxShadow = '0 6px 18px rgba(0,0,0,0.4)';
+      overlay.style.fontSize = '14px';
+      overlay.style.lineHeight = '1.4';
+      overlay.innerHTML = `<strong>${author || 'Someone'} 的故事：</strong><div style="margin-top:8px;">${text}</div>`;
+      document.body.appendChild(overlay);
+      setTimeout(() => {
+        overlay.style.transition = 'opacity 0.6s';
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 600);
+      }, 7000); // show for 7s
+    } catch (e) {
+      console.warn('Failed to show lantern story overlay', e);
+    }
+  }
 
   // Initialize THREE.js stage when available
   function initStage() {

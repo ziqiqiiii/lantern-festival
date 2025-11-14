@@ -49,3 +49,56 @@ Notes / next steps:
 - This is an intentionally small, self-contained starting point. It uses in-memory rooms (not persisted). For production, add auth and persistence.
 - The folding/3D animations are only placeholder; you can replace the mobile submission flow with a richer folding animation and send not only a PNG but vector data or multi-face patterns.
 - Consider using a CDN or bundler for production assets.
+
+## Environment / QWEN_API_KEY
+
+This project may require the QWEN_API_KEY environment variable to access the Qwen API. Do not commit your API key to source control.
+
+Examples to set the variable:
+
+- Linux / macOS (bash, zsh)
+  - Temporary (current shell session):
+    ```
+    export QWEN_API_KEY="your_api_key_here"
+    ```
+  - Single-command (one-off):
+    ```
+    QWEN_API_KEY="your_api_key_here" node server.js
+    ```
+  - Persist permanently (add to your shell profile, e.g. ~/.bashrc or ~/.zshrc):
+    ```
+    echo 'export QWEN_API_KEY="your_api_key_here"' >> ~/.bashrc
+    source ~/.bashrc
+    ```
+
+- Windows PowerShell
+  - Temporary (current session):
+    ```
+    $env:QWEN_API_KEY = "your_api_key_here"
+    ```
+  - Persist for the current user (requires reopening shells to take effect):
+    ```
+    setx QWEN_API_KEY "your_api_key_here"
+    ```
+
+- Windows CMD
+  - Temporary (current session):
+    ```
+    set QWEN_API_KEY=your_api_key_here
+    ```
+  - Persist for the current user:
+    ```
+    setx QWEN_API_KEY "your_api_key_here"
+    ```
+
+- Using a .env file (recommended for local development)
+  1. Create a file named `.env` in the project root:
+     ```
+     QWEN_API_KEY=your_api_key_here
+     ```
+  2. Ensure your app loads environment variables (e.g., via dotenv) and add `.env` to `.gitignore`:
+     ```
+     echo ".env" >> .gitignore
+     ```
+
+Security note: Treat QWEN_API_KEY like a password. Do not push it to public repositories or share it in logs. Rotate the key if it is accidentally exposed.

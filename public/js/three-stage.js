@@ -17,25 +17,38 @@
     speedRange: { y: [0.01, 0.03], rot: [0.01, 0.015] },
     size: { width: 1, height: 1.2 },
     maxLanterns: 10,
+<<<<<<< Updated upstream
     // Fire and lighting effects toggle
     enableFireEffects: false,  // Set to false to disable fire light and emissive glow
     fireIntensity: 4,         // Base fire light intensity
     emissiveIntensity: 0.7    // Material emissive glow intensity
+=======
+    enableFireEffects: true,
+    fireIntensity: 4,
+    emissiveIntensity: 0.7
+>>>>>>> Stashed changes
   };
 
-  const SHADOW_COLOR = 0x5a5a5a;
-  const SHADOW_EMISSIVE = 0x4a4a4a;
-  const FIRE_COLOR = 0xff6b1a;
-  const LABEL_OFFSET_Y = -1;
+  // Visual constants / fallbacks (were missing and caused runtime errors)
+  const FIRE_COLOR = 0xffd7a8;      // warm emissive color for lantern fire
+  const SHADOW_COLOR = 0x111111;    // shadow material base color
+  const SHADOW_EMISSIVE = 0x000000; // shadow emissive fallback
+  const LABEL_OFFSET_Y = -0.9;      // vertical offset for name label
 
   // ============================================================================
-  // STATE
+  // STATE (added raycasting state)
   // ============================================================================
 
   let scene, camera, renderer;
   const lanterns = new Set();
-  const lanternQueue = []; // Queue for lanterns waiting to spawn
+  const lanternQueue = [];
   let lastTime = 0;
+
+  // Raycaster and pointer state for hover/click interaction
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  let hoveredMesh = null;
+  let storyOverlay = null;
 
   // ============================================================================
   // INITIALIZATION
@@ -54,13 +67,17 @@
     setupLights();
     setupResizeHandler(canvas);
 
+    // Setup pointer events for hover/click
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('click', onPointerClick);
+
     animate();
   }
 
   function setupRenderer(canvas) {
     renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.sortObjects = true; // Enable sorting for proper transparency rendering
+    renderer.sortObjects = true;
     resizeCanvas(canvas);
   }
 
@@ -263,7 +280,7 @@
   }
 
   // ============================================================================
-  // LANTERN SPAWNING
+  // LANTERN SPAWNING (attach story/user data and expose spawnLanternOnStage)
   // ============================================================================
 
   function spawnFromData(data) {
@@ -310,7 +327,14 @@
     const texturePromises = texUrls.map(url => loadSingleTexture(loader, url));
 
     Promise.all(texturePromises).then(textures => {
+<<<<<<< Updated upstream
       const mesh = createLanternMesh(textures, data.bgColor, data.shape);
+=======
+      const mesh = createLanternMesh(textures, data.bgColor);
+      // attach author/story to mesh userData for interaction
+      mesh.userData.story = data.story || null;
+      mesh.userData.author = data.name || null;
+>>>>>>> Stashed changes
       initializeLanternTransform(mesh);
       addNameLabelIfPresent(mesh, data.name);
       addLanternToScene(mesh);
@@ -361,7 +385,105 @@
   }
 
   // ============================================================================
-  // ANIMATION & UPDATE
+  // RAYCAST / INTERACTION HANDLERS
+  // ============================================================================
+
+  function onPointerMove(e) {
+    if (!renderer || !camera) return;
+    const canvas = renderer.domElement;
+    const rect = canvas.getBoundingClientRect();
+    pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(pointer, camera);
+    const intersects = raycaster.intersectObjects(Array.from(lanterns), true);
+    if (intersects.length > 0) {
+      const mesh = getParentLanternMesh(intersects[0].object);
+      if (hoveredMesh !== mesh) {
+        clearHover();
+        applyHover(mesh);
+        hoveredMesh = mesh;
+      }
+    } else {
+      clearHover();
+      hoveredMesh = null;
+    }
+  }
+
+  function onPointerClick(e) {
+    if (!hoveredMesh) return;
+    const story = hoveredMesh.userData.story;
+    const author = hoveredMesh.userData.author;
+    if (story) {
+      showStoryOverlay(story, author);
+    }
+  }
+
+  function getParentLanternMesh(obj) {
+    // if clicked a label sprite or child, walk up to mesh root
+    while (obj && !(obj.isMesh && obj.geometry && obj.userData !== undefined)) {
+      obj = obj.parent;
+    }
+    return obj;
+  }
+
+  function applyHover(mesh) {
+    if (!mesh) return;
+    // subtle scale up highlight
+    mesh.scale.set(1.08, 1.08, 1.08);
+  }
+
+  function clearHover() {
+    // reset any hovered mesh scales
+    lanterns.forEach(l => {
+      if (l.scale && (l.scale.x !== 1 || l.scale.y !== 1 || l.scale.z !== 1)) {
+        l.scale.set(1,1,1);
+      }
+    });
+  }
+
+  // Story overlay creation/removal
+  function showStoryOverlay(text, author) {
+    // remove existing
+    if (storyOverlay && storyOverlay.parentNode) storyOverlay.remove();
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.left = '50%';
+    overlay.style.top = '12%';
+    overlay.style.transform = 'translateX(-50%)';
+    overlay.style.background = 'rgba(0,0,0,0.8)';
+    overlay.style.color = '#fff';
+    overlay.style.padding = '14px 18px';
+    overlay.style.borderRadius = '10px';
+    overlay.style.zIndex = 99999;
+    overlay.style.maxWidth = '70%';
+    overlay.style.boxShadow = '0 8px 24px rgba(0,0,0,0.5)';
+    overlay.style.fontSize = '14px';
+    overlay.style.lineHeight = '1.5';
+    overlay.innerHTML = `<strong>${author || 'Someone'} 的故事：</strong><div style="margin-top:8px;">${escapeHtml(text)}</div>`;
+    document.body.appendChild(overlay);
+    storyOverlay = overlay;
+
+    // auto-hide after 8s
+    setTimeout(() => {
+      if (overlay && overlay.parentNode) {
+        overlay.style.transition = 'opacity 0.5s';
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 500);
+      }
+    }, 8000);
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  // ============================================================================
+  // ANIMATION & UPDATE (unchanged)
   // ============================================================================
 
   function animate(time) {
