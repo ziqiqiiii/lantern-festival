@@ -18,7 +18,7 @@
     size: { width: 1, height: 1.2 },
     maxLanterns: 10,
     // Fire and lighting effects toggle
-    enableFireEffects: true,  // Set to false to disable fire light and emissive glow
+    enableFireEffects: false,  // Set to false to disable fire light and emissive glow
     fireIntensity: 4,         // Base fire light intensity
     emissiveIntensity: 0.7    // Material emissive glow intensity
   };
@@ -32,7 +32,7 @@
   // STATE
   // ============================================================================
 
-  let scene, camera, renderer;  
+  let scene, camera, renderer;
   const lanterns = new Set();
   const lanternQueue = []; // Queue for lanterns waiting to spawn
   let lastTime = 0;
