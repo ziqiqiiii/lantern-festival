@@ -179,7 +179,11 @@ async function analyzeWithQWEN({ faces, shape, name }) {
     }
     content.push({
       type: 'text',
-      text: `Please generate a short story (around 80-120 words) based on the lantern images above. Relate the story to the history and cultural traditions of the Lantern Festival. Reply in clear English as plain text only.`
+      text: `You are a masterful Chinese cultural storyteller. Analyze the set of images provided, which represent the different illustrated faces of a single lantern. Examine them holistically to discern any meaning, whether from recognizable drawings, Chinese characters, words, colors, or abstract patterns. Look for connections across the faces that might form a phrase, theme, or narrative concept.
+
+Your task is to generate a short, poetic story (80-120 words) inspired by this visual analysis. If the images suggest a clear theme—such as reunion, hope, prosperity, or longevity—weave that theme into a tale rooted in Lantern Festival traditions and Chinese cultural values. If the drawings are abstract or ambiguous, interpret the mood, colors, and shapes to create an uplifting story about wishes, family, or renewal appropriate for the festival.
+
+Write in a warm, traditional storytelling style, incorporating classic symbolism like lantern light, the moon, family gatherings, and seasonal cycles. Ensure the narrative feels authentic and carries a subtle moral or philosophical insight, transforming the user's drawings into a meaningful cultural anecdote. Reply in clear English as plain text only.`
     });
 
     const payload = {

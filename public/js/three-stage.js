@@ -321,7 +321,7 @@
     const texturePromises = texUrls.map(url => loadSingleTexture(loader, url));
 
     Promise.all(texturePromises).then(textures => {
-      const mesh = createLanternMesh(textures, data.bgColor);
+      const mesh = createLanternMesh(textures, data.bgColor, data.shape);
       // attach author/story to mesh userData for interaction
       mesh.userData.story = data.story || null;
       mesh.userData.author = data.name || null;
