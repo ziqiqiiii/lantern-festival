@@ -241,6 +241,13 @@
       const joinButton = document.getElementById('joinButton');
       const errorMessage = document.getElementById('errorMessage');
 
+      // Check for join error from redirect
+      const joinError = sessionStorage.getItem('join_error');
+      if (joinError) {
+        showError(joinError);
+        sessionStorage.removeItem('join_error');
+      }
+
       // Reset button state on page load/back navigation
       window.addEventListener('pageshow', (event) => {
         joinButton.disabled = false;
@@ -265,7 +272,7 @@
         errorMessage.classList.add('show');
         setTimeout(() => {
           errorMessage.classList.remove('show');
-        }, 3000);
+        }, 5000);
       }
 
       // Handle form submission

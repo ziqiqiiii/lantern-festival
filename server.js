@@ -263,10 +263,20 @@ io.on('connection', (socket) => {
 
   socket.on('join-room', async (data) => {
     const { pin, name } = data;
+
+    // Check if room exists
     if (!rooms.has(pin)) {
-      socket.emit('join-failed', { message: 'Room not found' });
+      socket.emit('join-failed', { message: 'Room not found. Please check the PIN and try again.' });
       return;
     }
+
+    // Check if host is active in the room
+    const room = rooms.get(pin);
+    if (!room.hostSocketId) {
+      socket.emit('join-failed', { message: 'Host is not currently active. Please try again later.' });
+      return;
+    }
+
     socket.join(pin);
     socket.pin = pin;
     socket.playerName = name || 'Guest';
