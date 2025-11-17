@@ -252,10 +252,43 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
       return;
     }
 
-    usersList.innerHTML = Array.from(players.values())
-      .map(name => `<div class="user-item">${name}</div>`)
-      .join('');
+    // Build list using DOM methods to avoid HTML injection and to include kick button
+    usersList.innerHTML = '';
+    players.forEach((name, id) => {
+      const item = document.createElement('div');
+      item.className = 'user-item';
+      item.dataset.id = id;
+
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = name || 'Guest';
+      item.appendChild(nameSpan);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'kick-btn';
+      btn.title = 'Kick user';
+      btn.innerText = '✖';
+      item.appendChild(btn);
+
+      usersList.appendChild(item);
+    });
   }
+
+  // Handle kick button clicks via event delegation
+  usersList.addEventListener('click', (e) => {
+    const btn = e.target.closest('.kick-btn');
+    if (!btn) return;
+    const item = btn.closest('.user-item');
+    if (!item) return;
+    const targetId = item.dataset.id;
+    const targetName = item.querySelector('span')?.textContent || 'Guest';
+
+    // Confirm kick
+    if (!confirm(`Kick ${targetName}? This will remove them from the room.`)) return;
+
+    // Emit kick request to server (host only)
+    socket.emit('kick-player', { id: targetId });
+  });
 
   // Update the small inline players line (if present) and keep sidebar list in sync
   function refreshPlayersLine() {

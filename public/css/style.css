@@ -637,6 +637,34 @@ body.mobile {
   border-left-color: rgba(102, 126, 234, 1);
 }
 
+/* Kick button shown on hover */
+.user-item{position:relative}
+.kick-btn{
+  position:absolute;
+  right:8px;
+  top:50%;
+  transform:translateY(-50%) translateX(8px);
+  opacity:0;
+  border:none;
+  background:linear-gradient(135deg,#ff6b6b 0%,#ff4757 100%);
+  color:#fff;
+  width:24px;
+  height:24px;
+  border-radius:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:all 0.18s ease;
+  box-shadow:0 6px 14px rgba(255,66,66,0.2);
+  font-size:16px;
+}
+.user-item:hover .kick-btn{
+  opacity:1;
+  transform:translateY(-50%) translateX(0);
+}
+.kick-btn:active{transform:translateY(-50%) scale(0.96)}
+
 .empty-state {
   color: rgba(255, 255, 255, 0.5);
   font-size: 13px;

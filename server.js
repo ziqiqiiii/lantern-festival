@@ -335,6 +335,41 @@ io.on('connection', (socket) => {
     console.log(`Lantern from ${socket.id} forwarded to host in ${pin}`);
   });
 
+  // Host requests to kick a player by socket id
+  socket.on('kick-player', async ({ id }) => {
+    try {
+      const roomPin = socket.pin;
+      if (!roomPin) return;
+      const room = rooms.get(roomPin);
+      if (!room) return;
+
+      // Only allow the host to kick
+      if (room.hostSocketId !== socket.id) {
+        console.warn('Non-host attempted to kick:', socket.id);
+        return;
+      }
+
+      // Remove player from internal room state
+      await removePlayerFromRoom(roomPin, id);
+
+      // Notify the kicked socket directly and attempt to disconnect
+      try {
+        const targetSocket = io.sockets.sockets && io.sockets.sockets.get ? io.sockets.sockets.get(id) : (io.sockets.connected && io.sockets.connected[id]);
+        if (targetSocket && targetSocket.emit) {
+          targetSocket.emit('kicked', { reason: 'You were kicked by the host.' });
+          try { targetSocket.disconnect(true); } catch (e) { /* ignore */ }
+        }
+      } catch (e) {
+        console.warn('Failed to notify/disconnect kicked socket', e);
+      }
+
+      // Broadcast updated player-left to room so host UI updates
+      io.to(roomPin).emit('player-left', { id });
+    } catch (err) {
+      console.error('kick-player error', err);
+    }
+  });
+
   socket.on('disconnect', async () => {
     // If host disconnected, clear room
     if (socket.pin && rooms.has(socket.pin)) {
