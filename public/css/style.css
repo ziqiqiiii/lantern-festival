@@ -677,6 +677,31 @@ body.mobile {
 .users-toggle-link { color: #fff; font-size:13px; text-decoration:underline; opacity:0.95; padding:6px 8px; border-radius:6px }
 .users-toggle-link:hover { opacity:1; color: #fff; text-decoration:none; background: rgba(255,255,255,0.03) }
 
+/* AI thumbnail overlay: show 'AI' label, change to reload icon on hover, show loading state */
+.bg-thumbnail.ai { position: relative; cursor: pointer; overflow: hidden; }
+.bg-thumbnail.ai::after {
+  content: 'AI';
+  position: absolute;
+  left: 0; right: 0; top: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(157, 157, 157, 0.8);
+  font-weight: 700;
+  font-size: 28px;
+  background: none;
+  transition: all 0.18s ease;
+  pointer-events: none;
+}
+.bg-thumbnail.ai:hover::after {
+  content: '⟳';
+  transform: scale(1.02);
+  font-size: 32px;
+}
+.bg-thumbnail.ai.loading::after {
+  content: '⌛';
+}
+
 .setting-group {
   margin-bottom: 18px;
   display: flex;

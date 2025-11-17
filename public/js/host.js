@@ -66,6 +66,18 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     updateSettingsUI();
   }
 
+  // Reset settings to defaults (used when creating a fresh new room)
+  function resetSettingsToDefaults() {
+    settings.maxLanterns = 10;
+    settings.respawnCount = 3;
+    settings.muteNarrator = false;
+    settings.muteSFX = false;
+    settings.autoPlayStories = true;
+    settings.bgImage = 'bg1.jpg';
+    saveSettings();
+    updateSettingsUI();
+  }
+
   // Save settings to localStorage
   function saveSettings() {
     localStorage.setItem('lanternHostSettings', JSON.stringify(settings));
@@ -168,8 +180,49 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   }
 
   // Background selection
+  // Placeholder hook for AI background generation. Your colleague can provide
+  // `window.requestAIGeneratedBackground()` which should return a Promise
+  // resolving to the generated filename (e.g. 'bgAI.jpg') or null on failure.
+  async function generateAIBackground(thumb) {
+    if (!thumb) return;
+    try {
+      thumb.classList.add('loading');
+      if (typeof window.requestAIGeneratedBackground === 'function') {
+        const result = await window.requestAIGeneratedBackground();
+        thumb.classList.remove('loading');
+        if (result) {
+          settings.bgImage = result;
+          saveSettings();
+          updateSettingsUI();
+        } else {
+          console.warn('AI background generator returned no result');
+        }
+      } else {
+        // Fallback stub: simulate a short generation delay and then select the
+        // placeholder image 'bgAI.jpg'. Colleague can replace this behavior.
+        await new Promise(r => setTimeout(r, 800));
+        thumb.classList.remove('loading');
+        settings.bgImage = thumb.dataset.bg || 'bgAI.jpg';
+        saveSettings();
+        updateSettingsUI();
+        console.log('AI background placeholder selected (stub)');
+      }
+    } catch (err) {
+      thumb.classList.remove('loading');
+      console.error('AI background generation failed', err);
+    }
+  }
+
   bgThumbnails.forEach(thumb => {
     thumb.addEventListener('click', () => {
+      // For the AI thumbnail, call the placeholder/generator instead of
+      // immediately applying the image.
+      const isAI = thumb.classList.contains('ai') || thumb.dataset.bg === 'bgAI.jpg';
+      if (isAI) {
+        generateAIBackground(thumb);
+        return;
+      }
+
       settings.bgImage = thumb.dataset.bg;
       saveSettings();
       updateSettingsUI();
@@ -205,6 +258,8 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     }
 
     // Create new room
+    // Reset host settings to defaults for a fresh room (do not reset on reconnect)
+    resetSettingsToDefaults();
     const res = await fetch('/create-room');
     const json = await res.json();
     pin = json.pin;
