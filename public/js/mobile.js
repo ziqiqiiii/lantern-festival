@@ -304,6 +304,7 @@
   } else {
     status.textContent = `Joining room ${pin}...`;
     socket.emit('join-room', { pin, name: playerName });
+    status.textContent = `Joined ${pin}. Draw your lantern and submit.`;
   }
 
   // Handle join failure - redirect back to join page with error
