@@ -6,6 +6,26 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
 (() => {
   const socket = io();
 
+  // Sidebar elements
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const sidebar = document.getElementById('sidebar');
+  const sidebarClose = document.getElementById('sidebarClose');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+  const usersList = document.getElementById('usersList');
+  const pinTextSidebar = document.getElementById('pinTextSidebar');
+  const pinInfo = document.getElementById('pinInfo');
+
+  // Settings elements
+  const maxLanternsInput = document.getElementById('maxLanterns');
+  const maxLanternsValue = document.getElementById('maxLanternsValue');
+  const respawnCountInput = document.getElementById('respawnCount');
+  const respawnCountValue = document.getElementById('respawnCountValue');
+  const muteNarratorCheckbox = document.getElementById('muteNarrator');
+  const muteSFXCheckbox = document.getElementById('muteSFX');
+  const autoPlayStoriesCheckbox = document.getElementById('autoPlayStories');
+  const bgThumbnails = document.querySelectorAll('.bg-thumbnail');
+
+  // Host page elements
   const pinArea = document.getElementById('pinArea');
   const pinText = document.getElementById('pinText');
   const qrcodeEl = document.getElementById('qrcode');
@@ -13,6 +33,151 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   const stageEl = document.getElementById('stage');
 
   let pin = null;
+
+  // Sidebar toggle functionality
+  function openSidebar() {
+    sidebar.classList.add('open');
+  }
+
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+  }
+
+  sidebarToggle.addEventListener('click', openSidebar);
+  sidebarClose.addEventListener('click', closeSidebar);
+  sidebarOverlay.addEventListener('click', closeSidebar);
+
+  // Settings Management
+  const settings = {
+    maxLanterns: 10,
+    respawnCount: 3,
+    muteNarrator: false,
+    muteSFX: false,
+    autoPlayStories: true,
+    bgImage: 'bg1.jpg'
+  };
+
+  // Load settings from localStorage
+  function loadSettings() {
+    const saved = localStorage.getItem('lanternHostSettings');
+    if (saved) {
+      Object.assign(settings, JSON.parse(saved));
+    }
+    updateSettingsUI();
+  }
+
+  // Save settings to localStorage
+  function saveSettings() {
+    localStorage.setItem('lanternHostSettings', JSON.stringify(settings));
+  }
+
+  // Update UI to reflect current settings
+  function updateSettingsUI() {
+    maxLanternsInput.value = settings.maxLanterns;
+    maxLanternsValue.textContent = settings.maxLanterns;
+    respawnCountInput.value = settings.respawnCount;
+    respawnCountValue.textContent = settings.respawnCount;
+    muteNarratorCheckbox.checked = settings.muteNarrator;
+    muteSFXCheckbox.checked = settings.muteSFX;
+    autoPlayStoriesCheckbox.checked = settings.autoPlayStories;
+
+    // Update background thumbnail selection
+    bgThumbnails.forEach(thumb => {
+      thumb.classList.remove('selected');
+      if (thumb.dataset.bg === settings.bgImage) {
+        thumb.classList.add('selected');
+      }
+    });
+
+    // Apply background image
+    const bgElement = document.querySelector('.lobby-background');
+    if (bgElement) {
+      bgElement.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.45),rgba(0,0,0,0.45)), url('/img/${settings.bgImage}')`;
+    }
+
+    // Apply lantern config
+    applyLanternConfig();
+
+    // Ensure slider visuals update correctly after programmatic value changes
+    // Dispatch an 'input' event so any UI bindings/listeners update thumbs and styles
+    try {
+      maxLanternsInput.dispatchEvent(new Event('input', { bubbles: true }));
+      respawnCountInput.dispatchEvent(new Event('input', { bubbles: true }));
+    } catch (e) {
+      // ignore if dispatching fails in some environments
+      console.warn('Failed to dispatch input events for sliders', e);
+    }
+  }
+
+  // Settings event listeners
+  maxLanternsInput.addEventListener('input', (e) => {
+    settings.maxLanterns = parseInt(e.target.value);
+    maxLanternsValue.textContent = settings.maxLanterns;
+    updateSliderFill(maxLanternsInput);
+    saveSettings();
+    applyLanternConfig();
+    socket.emit('settings-updated', settings);
+  });
+  maxLanternsInput.addEventListener('change', () => updateSliderFill(maxLanternsInput));
+
+  respawnCountInput.addEventListener('input', (e) => {
+    settings.respawnCount = parseInt(e.target.value);
+    respawnCountValue.textContent = settings.respawnCount;
+    updateSliderFill(respawnCountInput);
+    saveSettings();
+    applyLanternConfig();
+    socket.emit('settings-updated', settings);
+  });
+  respawnCountInput.addEventListener('change', () => updateSliderFill(respawnCountInput));
+
+  muteNarratorCheckbox.addEventListener('change', (e) => {
+    settings.muteNarrator = e.target.checked;
+    saveSettings();
+    socket.emit('settings-updated', settings);
+  });
+
+  muteSFXCheckbox.addEventListener('change', (e) => {
+    settings.muteSFX = e.target.checked;
+    saveSettings();
+    socket.emit('settings-updated', settings);
+  });
+
+  autoPlayStoriesCheckbox.addEventListener('change', (e) => {
+    settings.autoPlayStories = e.target.checked;
+    saveSettings();
+    socket.emit('settings-updated', settings);
+  });
+
+  // Apply lantern config to three-stage.js
+  function applyLanternConfig() {
+    if (window.LANTERN_CONFIG) {
+      window.LANTERN_CONFIG.maxLanterns = settings.maxLanterns;
+      window.LANTERN_CONFIG.respawnCount = settings.respawnCount;
+    }
+  }
+
+  // Visual helper to update slider track fill (cross-browser fallback)
+  function updateSliderFill(input) {
+    if (!input) return;
+    const min = parseFloat(input.min) || 0;
+    const max = parseFloat(input.max) || 100;
+    const val = parseFloat(input.value) || 0;
+    const pct = Math.round(((val - min) / (max - min)) * 100);
+    // Use background gradient to show filled portion and remaining track
+    input.style.background = `linear-gradient(90deg, rgba(102,126,234,0.9) ${pct}%, rgba(255,255,255,0.12) ${pct}%)`;
+  }
+
+  // Background selection
+  bgThumbnails.forEach(thumb => {
+    thumb.addEventListener('click', () => {
+      settings.bgImage = thumb.dataset.bg;
+      saveSettings();
+      updateSettingsUI();
+    });
+  });
+
+  // Load settings on page load
+  loadSettings();
 
   // Try to reconnect to existing room or create new one
   (async function initRoom() {
@@ -55,7 +220,9 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   // Function to display room info (PIN and QR code)
   function displayRoomInfo(roomPin) {
     pinText.textContent = roomPin;
+    pinTextSidebar.textContent = roomPin;
     pinArea.style.display = 'block';
+    pinInfo.style.display = 'block';
     const hostOverride = window.__QR_HOST_OVERRIDE__ || location.origin;
     const joinUrl = `${hostOverride}/join/${roomPin}`;
     qrcodeEl.innerHTML = '';
@@ -76,22 +243,39 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     }
   }
 
-  // maintain a simple list of player names shown inline (playersSpan may be absent)
+  // maintain a map of player names
   const players = new Map();
+
+  function updateUsersList() {
+    if (players.size === 0) {
+      usersList.innerHTML = '<p class="empty-state">No users connected</p>';
+      return;
+    }
+
+    usersList.innerHTML = Array.from(players.values())
+      .map(name => `<div class="user-item">${name}</div>`)
+      .join('');
+  }
+
+  // Update the small inline players line (if present) and keep sidebar list in sync
   function refreshPlayersLine() {
-    if (!playersSpan) return;
-    if (players.size === 0) playersSpan.textContent = '(none)';
-    else playersSpan.textContent = Array.from(players.values()).join(', ');
+    // Update inline header players line if the element exists
+    if (playersSpan) {
+      if (players.size === 0) playersSpan.textContent = '(none)';
+      else playersSpan.textContent = Array.from(players.values()).join(', ');
+    }
+    // Always update the sidebar users list so it's populated even if header line is absent
+    updateUsersList();
   }
 
   socket.on('player-joined', (data) => {
     players.set(data.id, data.name || 'Guest');
-    refreshPlayersLine();
+    updateUsersList();
   });
 
   socket.on('player-left', (data) => {
     players.delete(data.id);
-    refreshPlayersLine();
+    updateUsersList();
   });
 
   // Handle new lantern submission
@@ -150,6 +334,15 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     if (window.initLanternStage) {
       window.initLanternStage();
       console.log('✅ THREE.js lantern stage initialized');
+      // Apply any saved host settings to the stage config now that it exists
+      try {
+        applyLanternConfig();
+        // Also update visual slider fills in case stage applied values changed
+        updateSliderFill(maxLanternsInput);
+        updateSliderFill(respawnCountInput);
+      } catch (e) {
+        console.warn('Failed to apply lantern config after stage init', e);
+      }
     } else {
       console.warn('⚠️ initLanternStage not available, retrying...');
       setTimeout(initStage, 100);
@@ -161,6 +354,7 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   socket.on('room-state', (s) => {
     if (s && s.players) {
       s.players.forEach(p => players.set(p.id, p.name));
+      // update both inline and sidebar lists
       refreshPlayersLine();
     }
   });
