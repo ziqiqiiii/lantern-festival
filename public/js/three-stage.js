@@ -323,7 +323,7 @@
     Promise.all(texturePromises).then(textures => {
       const mesh = createLanternMesh(textures, data.bgColor, data.shape);
       // attach author/story to mesh userData for interaction
-      mesh.userData.story = data.story || null;
+      mesh.userData.customMessage = data.customMessage || null;
       mesh.userData.author = data.name || null;
       initializeLanternTransform(mesh);
       addNameLabelIfPresent(mesh, data.name);
@@ -402,7 +402,7 @@
 
   function onPointerClick(e) {
     if (!hoveredMesh) return;
-    const story = hoveredMesh.userData.story;
+    const story = hoveredMesh.userData.customMessage;
     const author = hoveredMesh.userData.author;
     if (story) {
       showStoryOverlay(story, author);
@@ -450,7 +450,7 @@
     overlay.style.boxShadow = '0 8px 24px rgba(0,0,0,0.5)';
     overlay.style.fontSize = '14px';
     overlay.style.lineHeight = '1.5';
-    overlay.innerHTML = `<strong>${author || 'Someone'} 的故事：</strong><div style="margin-top:8px;">${escapeHtml(text)}</div>`;
+    overlay.innerHTML = `<strong>${author || 'Someone'}'s story: </strong><div style="margin-top:8px;">${escapeHtml(text)}</div>`;
     document.body.appendChild(overlay);
     storyOverlay = overlay;
 

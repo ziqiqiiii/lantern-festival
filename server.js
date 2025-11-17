@@ -281,10 +281,27 @@ io.on('connection', (socket) => {
     console.log(`Player ${socket.id} (${socket.playerName}) joined ${pin}`);
   });
 
-  // Make the submit handler async so we can await visual analysis
+  // Handle story generation request (on-demand from mobile client)
+  socket.on('generate-story', async (data, callback) => {
+    const { pin, shape, faces } = data;
+    if (!pin || !faces || !faces.length) {
+      if (callback) callback(null);
+      return;
+    }
+
+    try {
+      const story = await analyzeWithQWEN({ faces, shape, name: socket.playerName });
+      if (callback) callback(story || null);
+    } catch (err) {
+      console.error('Error during QWEN analysis:', err);
+      if (callback) callback(null);
+    }
+  });
+
+  // Make the submit handler async so we can process the submission
   socket.on('submit-lantern', async (data) => {
     console.log('Socket data size:', JSON.stringify(data).length);
-    const { pin, shape, faces } = data;
+    const { pin, shape, faces, customMessage, autoNarrate } = data;
     if (!pin) return;
 
     if (!faces || !Array.isArray(faces)) {
@@ -299,21 +316,10 @@ io.on('connection', (socket) => {
       name: socket.playerName,
       shape,
       faces: faces,
-      bgColor: data.bgColor || null
+      bgColor: data.bgColor || null,
+      customMessage: customMessage || '',
+      autoNarrate: autoNarrate !== false // Default to true if not specified
     };
-
-    // Direct Qwen3-VL call using API key
-    try {
-      const story = await analyzeWithQWEN({ faces, shape, name: socket.playerName });
-      if (story) {
-        lanternData.story = story;
-        console.log('QWEN story generated for lantern:', { id: socket.id, pin, preview: story.slice(0, 120) });
-      } else {
-        console.log('No story returned from QWEN for lantern', { id: socket.id, pin });
-      }
-    } catch (err) {
-      console.error('Error during QWEN analysis:', err);
-    }
 
     io.to(pin).emit('new-lantern', lanternData);
     console.log(`Lantern from ${socket.id} forwarded to host in ${pin}`);
