@@ -532,7 +532,9 @@
     if (lantern.position.y <= y[1]) return;
 
     const { respawnCount } = window.LANTERN_CONFIG;
-    const shouldRespawn = respawnCount === 0 || lantern.userData.spawnCount < respawnCount;
+    // respawnCount 0 = no respawns; infinite respawns not supported yet
+    // respawnCount > 0 = respawn that many times
+    const shouldRespawn = lantern.userData.spawnCount < respawnCount;
 
     if (shouldRespawn) {
       respawnLantern(lantern);

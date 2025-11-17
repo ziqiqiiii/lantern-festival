@@ -310,11 +310,11 @@
   // Handle join failure - redirect back to join page with error
   socket.on('join-failed', (data) => {
     console.error('Join failed:', data.message);
-    
+
     // Clear session storage
     sessionStorage.removeItem('lantern_pin');
     sessionStorage.removeItem('lantern_name');
-    
+
     // Store error message and redirect to join page
     sessionStorage.setItem('join_error', data.message || 'Failed to join room.');
     window.location.href = '/join';
@@ -323,6 +323,16 @@
   // Handle successful join
   socket.on('join-success', () => {
     status.textContent = `Joined ${pin}. Draw your lantern and submit.`;
+  });
+
+  // Handle being kicked by host: store message and redirect to join page
+  socket.on('kicked', (data) => {
+    console.warn('Kicked from room:', data && data.reason);
+    try {
+      sessionStorage.setItem('join_error', data && data.reason ? data.reason : 'You were removed from the room by the host.');
+    } catch (e) { /* ignore storage errors */ }
+    // Redirect to join landing so user can re-enter or create a new session
+    window.location.href = '/join';
   });
 
   // folding preview using CSS 3D transforms
