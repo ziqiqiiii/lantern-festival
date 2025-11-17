@@ -246,15 +246,36 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   // maintain a map of player names
   const players = new Map();
 
+  // Limit visible users in sidebar and allow toggling
+  const VISIBLE_USERS_LIMIT = 5; // show first 6 users by default
+  let usersShowAll = false;
+  const usersCountEl = document.getElementById('usersCount');
+  const usersToggleWrap = document.getElementById('usersToggle');
+
   function updateUsersList() {
-    if (players.size === 0) {
+    // Update counter
+    const total = players.size;
+    if (usersCountEl) usersCountEl.textContent = `(${total})`;
+
+    if (total === 0) {
       usersList.innerHTML = '<p class="empty-state">No users connected</p>';
+      if (usersToggleWrap) usersToggleWrap.innerHTML = '';
       return;
     }
 
-    // Build list using DOM methods to avoid HTML injection and to include kick button
+    // Determine slice of players to show
+    const showAll = usersShowAll || total <= VISIBLE_USERS_LIMIT;
+    const toRender = [];
+    let idx = 0;
+    for (const [id, name] of players) {
+      if (!showAll && idx >= VISIBLE_USERS_LIMIT) break;
+      toRender.push({ id, name });
+      idx++;
+    }
+
+    // Build DOM nodes
     usersList.innerHTML = '';
-    players.forEach((name, id) => {
+    toRender.forEach(({ id, name }) => {
       const item = document.createElement('div');
       item.className = 'user-item';
       item.dataset.id = id;
@@ -272,6 +293,28 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
 
       usersList.appendChild(item);
     });
+
+    // Show toggle when there are more users than the limit
+    if (usersToggleWrap) {
+      if (total > VISIBLE_USERS_LIMIT) {
+        const remaining = Math.max(0, total - VISIBLE_USERS_LIMIT);
+        usersToggleWrap.innerHTML = '';
+        const link = document.createElement('a');
+        link.href = '#';
+        link.className = 'users-toggle-link';
+        link.textContent = usersShowAll ? 'Show less' : `Show ${remaining} more`;
+        link.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          usersShowAll = !usersShowAll;
+          updateUsersList();
+          // keep focus on sidebar after toggling
+          try { sidebar.focus(); } catch (e) { /* ignore */ }
+        });
+        usersToggleWrap.appendChild(link);
+      } else {
+        usersToggleWrap.innerHTML = '';
+      }
+    }
   }
 
   // Handle kick button clicks via event delegation

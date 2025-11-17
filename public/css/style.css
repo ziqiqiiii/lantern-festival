@@ -672,6 +672,11 @@ body.mobile {
   padding: 20px 10px;
 }
 
+/* Users toggle button */
+.users-toggle { display:flex; justify-content:left; margin-top:10px }
+.users-toggle-link { color: #fff; font-size:13px; text-decoration:underline; opacity:0.95; padding:6px 8px; border-radius:6px }
+.users-toggle-link:hover { opacity:1; color: #fff; text-decoration:none; background: rgba(255,255,255,0.03) }
+
 .setting-group {
   margin-bottom: 18px;
   display: flex;

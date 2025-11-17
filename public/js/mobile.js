@@ -310,11 +310,11 @@
   // Handle join failure - redirect back to join page with error
   socket.on('join-failed', (data) => {
     console.error('Join failed:', data.message);
-    
+
     // Clear session storage
     sessionStorage.removeItem('lantern_pin');
     sessionStorage.removeItem('lantern_name');
-    
+
     // Store error message and redirect to join page
     sessionStorage.setItem('join_error', data.message || 'Failed to join room.');
     window.location.href = '/join';
