@@ -10,6 +10,16 @@
   const prevBtn = document.getElementById('prevFace');
   const nextBtn = document.getElementById('nextFace');
 
+  // Message panel elements
+  const messageInput = document.getElementById('messageInput');
+  const generateStoryBtn = document.getElementById('generateStory');
+  const toggleNarrateBtn = document.getElementById('toggleNarrate');
+  const storyPreview = document.getElementById('storyPreview');
+  const storyPreviewText = document.getElementById('storyPreviewText');
+
+  // State for auto-narrate
+  let autoNarrate = true;
+
   // small helper to set multiple inline styles
   function setStyles(el, styles) {
     for (const k in styles) el.style[k] = styles[k];
@@ -581,8 +591,74 @@
       totalSize: JSON.stringify({ pin, shape, faces, bgColor: bgColorInput.value }).length
     });
 
-    // Send the data with background color
-    socket.emit('submit-lantern', { pin, shape, faces, bgColor: bgColorInput.value });
+    // Send the data with background color, custom message, and auto-narrate flag
+    socket.emit('submit-lantern', {
+      pin,
+      shape,
+      faces,
+      bgColor: bgColorInput.value,
+      customMessage: messageInput.value,
+      autoNarrate: autoNarrate
+    });
     status.textContent = 'Lantern submitted — it should appear on the host screen soon.';
+  });
+  // Toggle auto-narrate
+  toggleNarrateBtn.addEventListener('click', () => {
+    autoNarrate = !autoNarrate;
+    if (autoNarrate) {
+      toggleNarrateBtn.textContent = '🔊 Auto-Narrate: ON';
+      toggleNarrateBtn.classList.remove('narrate-disabled');
+      toggleNarrateBtn.classList.add('narrate-enabled');
+    } else {
+      toggleNarrateBtn.textContent = '🔇 Auto-Narrate: OFF';
+      toggleNarrateBtn.classList.remove('narrate-enabled');
+      toggleNarrateBtn.classList.add('narrate-disabled');
+    }
+  });
+
+  // Generate AI story
+  generateStoryBtn.addEventListener('click', async () => {
+    const shape = shapeSelect.value || 'cube';
+    let faces = [];
+    if (shape === 'cube') {
+      faces = faceCanvases.map(c => c.toDataURL('image/png'));
+    } else {
+      faces = [cylinderCanvas.toDataURL('image/png')];
+    }
+
+    if (!faces || !faces.length) {
+      status.textContent = 'Error: No lantern data to analyze';
+      return;
+    }
+
+    // Show loading state
+    generateStoryBtn.classList.add('loading');
+    generateStoryBtn.disabled = true;
+    messageInput.disabled = true;
+    status.textContent = 'Generating story...';
+
+    try {
+      // Emit event to server to generate story
+      socket.emit('generate-story', { pin, shape, faces }, (story) => {
+        generateStoryBtn.classList.remove('loading');
+        generateStoryBtn.disabled = false;
+        messageInput.disabled = false;
+
+        if (story) {
+          messageInput.value = story;
+          storyPreviewText.textContent = story;
+          storyPreview.style.display = 'block';
+          status.textContent = 'Story generated! You can edit it before submitting.';
+        } else {
+          status.textContent = 'Failed to generate story. Please try again.';
+        }
+      });
+    } catch (err) {
+      console.error('Error generating story:', err);
+      generateStoryBtn.classList.remove('loading');
+      generateStoryBtn.disabled = false;
+      messageInput.disabled = false;
+      status.textContent = 'Error generating story. Please try again.';
+    }
   });
 })();

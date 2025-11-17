@@ -1,6 +1,7 @@
 // Optional: Override QR code URL for LAN testing
 // Set this in browser console if needed: window.__QR_HOST_OVERRIDE__ = 'http://YOUR_IP:3000'
-window.__QR_HOST_OVERRIDE__ = 'http://10.195.41.191:3000';
+// window.__QR_HOST_OVERRIDE__ = 'http://10.195.41.191:3000';
+window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
 
 (() => {
   const socket = io();
@@ -110,8 +111,8 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.41.191:3000';
     }
 
     // If the MCP produced a story, show it briefly on the host screen
-    if (data.story) {
-      showLanternStory(data.story, data.name);
+    if (data.customMessage && data.autoNarrate) {
+      showLanternStory(data.customMessage, data.name);
     }
   });
 
@@ -132,7 +133,7 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.41.191:3000';
       overlay.style.boxShadow = '0 6px 18px rgba(0,0,0,0.4)';
       overlay.style.fontSize = '14px';
       overlay.style.lineHeight = '1.4';
-      overlay.innerHTML = `<strong>${author || 'Someone'} 的故事：</strong><div style="margin-top:8px;">${text}</div>`;
+      overlay.innerHTML = `<strong>${author || 'Someone'}'s story: </strong><div style="margin-top:8px;">${text}</div>`;
       document.body.appendChild(overlay);
       setTimeout(() => {
         overlay.style.transition = 'opacity 0.6s';
