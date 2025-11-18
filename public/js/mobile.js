@@ -1,5 +1,12 @@
 (function () {
   const socket = io();
+  
+  // Add event listener to play background music on first click
+  document.addEventListener('click', () => {
+    if (window.LanternAudio) {
+      window.LanternAudio.playBackgroundMusic();
+    }
+  }, { once: true });
   const status = document.getElementById('status');
   const colorInput = document.getElementById('color');
   const bgColorInput = document.getElementById('bgColor');
@@ -9,6 +16,7 @@
   const faceLabel = document.getElementById('faceLabel');
   const prevBtn = document.getElementById('prevFace');
   const nextBtn = document.getElementById('nextFace');
+
 
   // Message panel elements
   const messageInput = document.getElementById('messageInput');
@@ -55,6 +63,8 @@
   const cubeFacesWrap = document.getElementById('cubeFaces');
   const cylinderWrap = document.getElementById('cylinderFace');
   const dots = Array.from(document.querySelectorAll('.dot'));
+  // Audio controls
+  const toggleMusicBtn = document.getElementById('toggleMusicMobile');
 
   let currentFaceIndex = 0;
   let currentBgColor = bgColorInput.value; // Track current background color
@@ -601,6 +611,12 @@
     }
     // show folding preview
     await showFoldingPreview(shape, faces);
+    
+    // Play air woosh sound effect
+    if (window.LanternAudio) {
+      window.LanternAudio.playAirWoosh();
+    }
+    
     // emit submit with faces payload
     // Check faces data before sending
     if (!faces || !faces.length) {
@@ -644,6 +660,19 @@
     }
   });
 
+
+  
+  // Audio control event listeners
+  if (toggleMusicBtn) {
+    toggleMusicBtn.addEventListener('click', () => {
+      if (window.LanternAudio) {
+        const isPlaying = window.LanternAudio.toggleBackgroundMusic();
+        toggleMusicBtn.textContent = isPlaying ? '🎵' : '🔇';
+        toggleMusicBtn.title = isPlaying ? 'Pause Music' : 'Play Music';
+      }
+    });
+  }
+  
   // Generate AI story
   generateStoryBtn.addEventListener('click', async () => {
     const shape = shapeSelect.value || 'cube';

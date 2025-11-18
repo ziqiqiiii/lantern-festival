@@ -6,12 +6,18 @@
     <title>Lantern Festival — Mobile</title>
     <link rel="stylesheet" href="/css/style.css">
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/audio.js"></script>
   </head>
   <body class="mobile">
     <div class="container">
       <div class="mobile-header">
         <h1>🏮 Create Your Lantern</h1>
         <div id="status" class="status-text"></div>
+        <!-- Audio Controls -->
+        <div class="audio-controls">
+          <button id="toggleMusicMobile" class="audio-btn" title="Toggle Music">🎵</button>
+        </div>
+
       </div>
 
       <div class="shape-selector">
