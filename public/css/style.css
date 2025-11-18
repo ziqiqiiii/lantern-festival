@@ -57,6 +57,39 @@ body.mobile {
   letter-spacing: -0.5px;
 }
 
+/* Audio Controls for Mobile */
+.audio-controls {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.audio-btn {
+  width: 50px;
+  height: 50px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.audio-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.1);
+}
+
+.audio-btn:active {
+  transform: scale(0.95);
+}
+
 .status-text {
   margin-top: 10px;
   font-size: 14px;
@@ -303,6 +336,12 @@ body.mobile {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.audio-controls .btn {
+  padding: 10px 15px;
+  font-size: 14px;
+  border-radius: 8px;
 }
 
 .btn-primary {

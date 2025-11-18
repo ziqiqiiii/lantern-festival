@@ -24,6 +24,8 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   const muteSFXCheckbox = document.getElementById('muteSFX');
   const autoPlayStoriesCheckbox = document.getElementById('autoPlayStories');
   const bgThumbnails = document.querySelectorAll('.bg-thumbnail');
+  
+
 
   // Host page elements
   const pinArea = document.getElementById('pinArea');
@@ -130,6 +132,8 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     applyLanternConfig();
     socket.emit('settings-updated', settings);
   });
+  
+
   maxLanternsInput.addEventListener('change', () => updateSliderFill(maxLanternsInput));
 
   respawnCountInput.addEventListener('input', (e) => {
@@ -151,6 +155,16 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   muteSFXCheckbox.addEventListener('change', (e) => {
     settings.muteSFX = e.target.checked;
     saveSettings();
+    
+    // Use this checkbox to control background music instead
+    if (window.LanternAudio) {
+      if (settings.muteSFX) {
+        window.LanternAudio.pauseBackgroundMusic();
+      } else {
+        window.LanternAudio.playBackgroundMusic();
+      }
+    }
+    
     socket.emit('settings-updated', settings);
   });
 
@@ -231,6 +245,13 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
 
   // Load settings on page load
   loadSettings();
+  
+  // Add event listener to play background music on first click
+  document.addEventListener('click', () => {
+    if (window.LanternAudio) {
+      window.LanternAudio.playBackgroundMusic();
+    }
+  }, { once: true });
 
   // Try to reconnect to existing room or create new one
   (async function initRoom() {
