@@ -674,6 +674,13 @@
   }
   
   // Generate AI story
+  let storyBilingual = null; // store { en, zh } when generated
+
+  // Per-submission client id to help host dedupe duplicates
+  function makeClientId() {
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  }
+
   generateStoryBtn.addEventListener('click', async () => {
     const shape = shapeSelect.value || 'cube';
     let faces = [];
@@ -695,20 +702,23 @@
     status.textContent = 'Generating story...';
 
     try {
-      // Emit event to server to generate story
-      socket.emit('generate-story', { pin, shape, faces }, (story) => {
+      // Emit event to server to generate bilingual story
+      socket.emit('generate-story', { pin, shape, faces }, (bilingual) => {
         generateStoryBtn.classList.remove('loading');
         generateStoryBtn.disabled = false;
         messageInput.disabled = false;
 
-        if (story) {
-          messageInput.value = story;
-          storyPreviewText.textContent = story;
-          storyPreview.style.display = 'block';
-          status.textContent = 'Story generated! You can edit it before submitting.';
-        } else {
+        if (!bilingual) {
           status.textContent = 'Failed to generate story. Please try again.';
+          return;
         }
+
+        // Save bilingual pair and show English by default
+        storyBilingual = bilingual;
+        messageInput.value = bilingual.en || bilingual.zh || '';
+        storyPreviewText.textContent = messageInput.value;
+        storyPreview.style.display = 'block';
+        status.textContent = 'Story generated! You can edit it before submitting.';
       });
     } catch (err) {
       console.error('Error generating story:', err);
@@ -717,5 +727,35 @@
       messageInput.disabled = false;
       status.textContent = 'Error generating story. Please try again.';
     }
+  });
+
+  // Submit: include bilingual story when available
+  submitBtn.addEventListener('click', async () => {
+    const shape = shapeSelect.value || 'cube';
+    let faces = [];
+    if (shape === 'cube') {
+      faces = faceCanvases.map(c => c.toDataURL('image/png'));
+    } else {
+      faces = [cylinderCanvas.toDataURL('image/png')];
+    }
+
+    // ...existing validation...
+
+    const payload = {
+      _cid: makeClientId(),
+      pin,
+      shape,
+      faces,
+      bgColor: bgColorInput.value,
+      customMessage: messageInput.value || '',
+      customMessageBilingual: storyBilingual || null,
+      autoNarrate: autoNarrate
+    };
+    socket.emit('submit-lantern', payload);
+    status.textContent = 'Lantern submitted — it should appear on the host screen soon.';
+    
+    // Clear cached AI pair so the next submission is fresh (not tied to previous AI)
+    storyBilingual = null;
+    storyPreview.style.display = 'none';
   });
 })();
