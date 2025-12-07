@@ -102,5 +102,3 @@ Examples to set the variable:
      ```
 
 Security note: Treat QWEN_API_KEY like a password. Do not push it to public repositories or share it in logs. Rotate the key if it is accidentally exposed.
-
-musheroom said ni hao
