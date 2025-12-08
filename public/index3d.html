@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top-Middle Funnel Lanterns</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+    <style>
+        body, html { margin: 0; padding: 0; overflow-x: hidden; background-color: #050505; }
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: 2; pointer-events: none; }
+        body {
+            height: 650vh; /* % of the screen height */
+        }
+        /* A Centered Text Card with Margins and Background */
+        .text-card {
+            /* 1. CENTERING & MARGINS */
+            max-width: 1000px;       /* Never gets wider than 800px (keeps side margins) */
+            width: 90%;             /* On small phones, take up 90% of screen */
+            margin: 20px auto;     /* Top/Bottom margin: 100px. Left/Right: Auto (Centers it) */
+            
+            /* 2. BACKGROUND & SPACING */
+            background-color: rgba(0, 0, 0, 0.6); /* Black with 60% opacity (See-through) */
+            padding: 40px;          /* Breathing room inside the box */
+            border-radius: 15px;    /* Rounded corners */
+            text-align: center;
+        }
+
+        /* 4. The Layers */
+        body {/* Ensure the body is the reference point for the video */
+            position: relative;
+        }
+
+        /* Video Styling to ensure it covers the screen */
+        video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Ensures video fills screen without stretching */
+            z-index: 1;
+            opacity: 0.2; /* Dims the video slightly so lanterns pop */
+            /* 1.0 = Normal, 1.5 = 50% Zoom, 2.0 = 2x Zoom */
+            transform: scale(1.0);
+            
+            /* 2. Lock the Zoom to the Top Center */
+            transform-origin: top center;
+        }
+
+        /* 5. The Content (Text) - Sits on top */
+        .content { 
+            position: relative; 
+            z-index: 10; 
+            color: #ffd700; 
+            text-align: center;  
+            text-shadow: 0 2px 10px rgba(0,0,0,1); 
+        }
+
+        /* NEW: The Full-Screen "Welcome Mat" */
+        .hero {
+            height: 100vh; /* Takes up exactly 100% of the visible screen */
+            width: 100%;
+            display: flex;
+            flex-direction: column; /* Stacks title on top of subtitle */
+            justify-content: center; /* Centers vertically */
+            align-items: center;     /* Centers horizontally */
+        }
+
+        h1 { font-family: 'Georgia', 'Ma Shan Zheng', serif; font-size: 3rem; margin-bottom: 20px; letter-spacing: 2px; }
+        p { font-family: 'Georgia', 'Ma Shan Zheng', serif; font-size: 1.5rem; }
+        
+        /* --- FEATURE SECTION STYLES --- */
+        .feature-section {
+            display: flex;
+            align-items: center; /* Vertically center image and text */
+            justify-content: center;
+            min-height: 90vh; /* Each section takes up most of the screen */
+            padding: 0 3%; /* Breathing room on sides */
+            margin-bottom: 150px;
+        }
+
+        /* The Containers */
+        .lantern-showcase, .text-showcase {
+            flex: 1; /* Both take up equal width */
+            padding: 0px;
+        }
+
+        /* The Images */
+        .feature-img {
+            width: 200%;
+            max-width: 700px; /* Don't let them get HUGE */
+            height: auto;
+            filter: drop-shadow(0 0 20px rgba(255, 165, 0, 0.6)); /* Glow effect! */
+        }
+
+        /* Text Styling */
+        .text-showcase h2 {
+            font-family: 'Georgia', 'Ma Shan Zheng', serif;
+            font-size: 2.5rem;
+            color: #ffd700; /* Gold color for titles */
+            margin-bottom: 5px;
+        }
+
+        .text-showcase p {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            background: rgba(0,0,0,0.5); /* Semi-transparent background for readability */
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        /* --- ANIMATIONS (The Drifting) --- */
+
+        /* We create a "bobbing" animation using Keyframes */
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(2deg); }
+            50% { transform: translateY(-20px) rotate(-2deg); } /* Float Up and tilt left */
+            100% { transform: translateY(0px) rotate(2deg); }
+        }
+
+        /* Apply different speeds so they don't look synchronized */
+        .drift-slow {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .drift-medium {
+            animation: float 5s ease-in-out infinite;
+        }
+
+        .drift-fast {
+            animation: float 4s ease-in-out infinite;
+        }
+    </style>
+    
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+    </script>
+</head>
+<body>
+    <video src="background_video.mp4" autoplay loop muted playsinline></video>
+    <canvas id="bg-canvas"></canvas>
+
+    <div class="content">
+        <section class="hero">
+            <h1>The Festival of Lights</h1>
+            <h1>上元节</h1>
+            <p>Scroll down to release your wishes...</p>
+        </section>
+                
+        <div class="feature-section">
+            <div class="lantern-showcase left">
+                <img src="zhugeliang_lantern.png" class="feature-img drift-slow" alt="Health Lantern">
+            </div>
+            <div class="text-showcase right">
+                <h2>The Strategist's Signal (Wartime Origins)</h2>
+                <h2>《军师的烽火：战时起源》</h2>
+                <p>The story begins not with celebration, but with survival. In the turbulence of the Three Kingdoms period (circa 220–280 AD), the brilliant military strategist Zhuge Liang (courtesy name Kongming) found his army trapped by enemy forces. With no way to send a messenger on the ground, he looked to the sky. He crafted the first "floating balloon" using oiled rice paper and a bamboo frame, releasing it as a distress signal to summon reinforcements. These "Kongming Lanterns" were the world’s first hot-air balloons, born from the necessity of war.</p>
+                <p>这故事的起点并非庆典，而是求生。在烽火连天的三国时期（约公元220-280年），杰出的军事家诸葛亮（字孔明）率军陷入敌军围困。陆路传信无望之际，他举首望天。用浸油宣纸与竹骨制成首个"浮空灯"，放飞求援信号召集援军。这些"孔明灯"便成为世界上最早的热气球，诞生于战时的迫切需求之中。</p>
+            </div>
+        </div>
+
+        <div class="feature-section">
+            <div class="text-showcase left">
+                <h2>From Safety to Fertility</h2>
+                <h2>从平安到祈愿</h2>
+                <p>In Taiwan (Pingxi): During the Qing Dynasty, remote villages lived in fear of bandits. When winter raids forced villagers to flee into the mountains, watchmen stayed behind. A rising sky lantern was the "all-clear" signal—a beacon in the night telling families it was safe to return home.</p>
+                <p>在台湾（平溪）：清朝时期，偏远村落常受盗匪侵扰。冬日匪患迫使村民避入深山时，守望者会留守村中。一盏升空的天灯便是“平安信号”——犹如暗夜灯塔，告知家人可安然返家。</p>
+            </div>
+            <div class="lantern-showcase right">
+                <img src="taiwan_lantern.png" class="feature-img drift-medium" alt="taiwan_lantern">
+            </div>
+        </div>
+        <div class="feature-section">
+            <div class="lantern-showcase left">
+                <img src="hainan_lantern.png" class="feature-img drift-slow" alt="hainan_lantern">
+            </div>
+            <div class="text-showcase right">
+                <p>In Hainan: The tradition took a linguistic turn. In the local dialect, "Tian Deng" (Sky Lantern) sounds almost identical to "Tian Ding" (Adding a Son). Lighting a lantern became a ritual not just for safety, but for the growth of the family, a prayer for children and prosperity.</p>
+                <p>在海南：这项传统发生了语言上的转义。当地方言中，“天灯”与“添丁”发音相近。燃放天灯不仅是为祈求平安，更成为家族人丁兴旺的仪式，寄托着子嗣绵延、家业昌盛的愿景。</p>
+            </div>
+        </div>
+
+        <div class="feature-section">
+            <div class="lantern-showcase left">
+                <img src="exploded_lantern.png" class="feature-img drift-fast" alt="exploded_lantern">
+            </div>
+            <div class="text-showcase right">
+                <h2>Crafting the Light</h2>
+                <h2>巧手制天灯</h2>
+                <p>The magic of the sky lantern lies in its simplicity. Traditionally, it requires only natural elements: a sturdy frame of bamboo, a shell of rice paper, and a fuel cell of waxy paper or cloth. The paper is treated with oil to make it water-resistant and durable. It is a delicate balance of engineering—light enough to float, yet strong enough to hold the fire that powers its ascent.</p>
+                <p>天灯的妙处在于其质朴的工艺。传统制作仅需天然材料：竹条扎成牢固骨架，宣纸糊作灯罩，蜡纸或布块作为燃料基座。纸张经浸油处理以防水耐用。这需要精巧的平衡——既要轻盈足以飘升，又需坚韧能承载托起它飞向苍穹的火焰。</p>
+            </div>
+        </div>
+        <div class="text-card">
+            <div class="text-showcase">
+                <h2>The Sea of Wishes</h2>
+                <h2>愿汇星河</h2>
+                <p>Today, the lantern has shed its military skin completely. It is now a canvas for the human heart. In massive festivals like the Pingxi Sky Lantern Festival, thousands gather to write their deepest hopes—health, love, fortune—onto the paper sides. When released together, they form a slow-moving river of stars, a collective act of letting go of the past and sending dreams to the heavens.</p>
+                <p>如今，天灯早已褪去军事外衣，化作承载心愿的画布。在平溪天灯节等盛大庆典中，成千上万的人们齐聚，将健康、姻缘、富贵等最深切的期盼书写于灯面。当万千天灯同时升起，便汇成一条缓缓流淌的星河，成为人们告别往昔、寄梦苍穹的集体仪式。</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // 1. SETUP
+        const canvas = document.querySelector('#bg-canvas');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050505, 0.03); // Distance fog
+
+        // 2. CAMERA SETUP (Critical for the "Top" look)
+        const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 150);
+        
+        // Position: Low to the ground (-10), pushed back (+25)
+        camera.position.set(0, 0, 15); 
+        
+        // Where camera looking: Far ahead and slightly down
+        camera.lookAt(0, -10, -20);
+
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        // 3. LANTERN CREATION
+        const geometry = new THREE.CylinderGeometry(0.4, 0.2, 0.7, 4, 1, true);
+        
+        // TOP LID
+        const lidGeometry = new THREE.SphereGeometry(0.4, 4, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+        const material = new THREE.MeshBasicMaterial({ 
+            color: 0xffaa00, transparent: true, opacity: 0.8, side: THREE.DoubleSide,
+            depthWrite: true
+        });
+        
+        //OUTLINE OF LANTERN + COLOUR
+        const edges = new THREE.EdgesGeometry(geometry);
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.6 });
+
+        // NEW: FLAME SETUP
+        // 1. The Core (Keep this a capsule for the wick)
+        const flameGeometry = new THREE.CapsuleGeometry(0.05, 0.15, 4, 8);
+        const flameMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
+        // 2. The Glow (NOW A SOFT SPRITE)
+        const glowTexture = createGlowTexture(); // <--- Generate the texture
+        const glowMaterial = new THREE.SpriteMaterial({ 
+            map: glowTexture, 
+            color: 0xffaa00,
+            transparent: true, 
+            opacity: 0.95,
+            blending: THREE.AdditiveBlending, // Makes it look like light
+            depthWrite: false // Prevents sorting glitches
+        });
+
+        const lanterns = [];
+        const lanternCount = 150;
+        
+        // TUNNEL SETTINGS
+        const tunnelLength = 120; 
+        const tunnelWidth = 80;   // Start very wide
+        
+        for (let i = 0; i < lanternCount; i++) {
+            const group = new THREE.Group();
+            group.add(new THREE.Mesh(geometry, material));
+            group.add(new THREE.LineSegments(edges, lineMaterial));
+            
+            // 2. Add the Top Lid
+            const lid = new THREE.Mesh(lidGeometry, material);
+            lid.position.y = 0.35; 
+            group.add(lid);
+
+            // 3. Add the Flame (At the bottom opening)
+            const flame = new THREE.Mesh(flameGeometry, flameMaterial);
+            flame.position.y = -0.18; // Bottom of cylinder
+            group.add(flame);
+
+            // 4. Add the Soft Glow Sprite
+            const glow = new THREE.Sprite(glowMaterial);
+            glow.scale.set(1.7, 2, -0.1); // sprites (Width, Height, Depth)
+            glow.position.y = 0; // Center of the flame
+            group.add(glow);
+            
+            // 5. Setup Animation Data
+            group.userData = {
+                // ... (Keep all your existing offsets: offsetZ, offsetX, etc.) ...
+                offsetZ: Math.random() * tunnelLength, 
+                offsetX: (Math.random() - 0.5) * tunnelWidth,
+                offsetY: -20 + Math.random() * 10,
+                swaySpeed: Math.random() * 0.002,
+                swayOffset: Math.random() * Math.PI,
+                
+                // Flame Flicker Data
+                flameMesh: flame,
+                glowMesh: glow
+            };
+            
+            scene.add(group);
+            lanterns.push(group);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 4. ANIMATION LOOP
+        function animate() {
+            requestAnimationFrame(animate);
+            const scrollPos = window.scrollY * 0.01; 
+
+            lanterns.forEach(l => {
+                const data = l.userData;
+
+                // A. CALCULATE DEPTH (Z)
+                let rawZ = data.offsetZ + scrollPos;
+                let currentZ = ((rawZ % tunnelLength) + tunnelLength) % tunnelLength;
+                
+                // Z Range: From 25 (Close) to -95 (Far)
+                let finalZ = 25 - currentZ; 
+
+                // B. CALCULATE PROGRESS (0.0 = Close, 1.0 = Far)
+                let progress = (25 - finalZ) / tunnelLength; 
+                
+                // C. FUNNEL: SQUEEZE X TOWARDS CENTER
+                // At progress 1 (far), width is only 5% (0.05) of original
+                let funnelFactor = 1 - (progress * 0.95); 
+                l.position.x = data.offsetX * funnelFactor; 
+                
+                // D. RISE: PUSH Y TOWARDS TOP
+                // This is the key change. We add (progress * 80).
+                // This creates a steep upward slope.
+                l.position.y = data.offsetY + (progress * 80); 
+
+                l.position.z = finalZ;
+
+                // E. SCALE
+                let scale = 1.5 - (progress * 1.3);
+                if (scale < 0.1) scale = 0.1;
+                l.scale.set(scale, scale, scale);
+
+                // F. SWAY
+                const time = Date.now();
+                l.rotation.y = Math.sin(time * data.swaySpeed + data.swayOffset) * 0.2;
+                l.rotation.z = Math.cos(time * data.swaySpeed) * 0.05;
+                // G. SMOOTH FIRE FLICKER
+                if (data.flameMesh && data.glowMesh) {
+                    
+                    // 1. Get the current time
+                    const time = Date.now();
+                    
+                    // 2. Calculate smooth flicker using Sine Waves
+                    // 0.005 is the SPEED. Change to 0.002 to make it even slower.
+                    const smoothWave = Math.sin(time * 0.005 + data.swayOffset); 
+                    const jitter = Math.random() * 0.05; // Tiny random shake
+                    
+                    // Base scale (1.0) + Wave variation (0.15) + Jitter
+                    const flicker = 1 + (smoothWave * 0.15) + jitter; 
+
+                    // 3. Apply to Flame (The White Core)
+                    data.flameMesh.scale.set(flicker, flicker, flicker);
+
+                    // 4. Apply to Glow (The Orange Halo)
+                    // We make the glow slightly exaggerated compared to the core
+                    const glowScale = flicker * 1.3;
+                    data.glowMesh.scale.set(glowScale, glowScale, glowScale);
+                    
+                    // 5. Pulse Opacity
+                    // Makes the light actually dim and brighten
+                    data.glowMesh.material.opacity = 0.5 + (smoothWave * 0.1);
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+        // HELPER: Generates a soft glow texture programmatically
+        function createGlowTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const context = canvas.getContext('2d');
+            
+            // Draw a radial gradient (White center -> Orange mid -> Transparent edge)
+            const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');   // Hot Center
+            gradient.addColorStop(0.2, 'rgba(255, 160, 0, 0.8)'); // Fire Orange
+            gradient.addColorStop(0.5, 'rgba(255, 60, 0, 0.3)');  // Fading Red
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');         // Transparent Edge
+
+            context.fillStyle = gradient;
+            context.fillRect(0, 0, 64, 64);
+            
+            return new THREE.CanvasTexture(canvas);
+        }
+    </script>
+</body>
+</html>
