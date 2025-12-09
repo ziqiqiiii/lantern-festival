@@ -179,7 +179,11 @@ async function analyzeWithQWEN({ faces, shape, name }) {
     }
     content.push({
       type: 'text',
-      text: `Please generate a short story (around 80-120 words) based on the lantern images above. Relate the story to the history and cultural traditions of the Lantern Festival. Reply in clear English as plain text only.`
+      text: `You are a masterful Chinese cultural storyteller. Analyze the set of images provided, which represent the different illustrated faces of a single lantern. Examine them holistically to discern any meaning, whether from recognizable drawings, Chinese characters, words, colors, or abstract patterns. Look for connections across the faces that might form a phrase, theme, or narrative concept.
+
+Your task is to generate a short, poetic story (80-120 words) inspired by this visual analysis. If the images suggest a clear theme—such as reunion, hope, prosperity, or longevity—weave that theme into a tale rooted in Lantern Festival traditions and Chinese cultural values. If the drawings are abstract or ambiguous, interpret the mood, colors, and shapes to create an uplifting story about wishes, family, or renewal appropriate for the festival.
+
+Write in a warm, traditional storytelling style, incorporating classic symbolism like lantern light, the moon, family gatherings, and seasonal cycles. Ensure the narrative feels authentic and carries a subtle moral or philosophical insight, transforming the user's drawings into a meaningful cultural anecdote. Reply in clear English as plain text only.`
     });
 
     const payload = {
@@ -259,10 +263,20 @@ io.on('connection', (socket) => {
 
   socket.on('join-room', async (data) => {
     const { pin, name } = data;
+
+    // Check if room exists
     if (!rooms.has(pin)) {
-      socket.emit('join-failed', { message: 'Room not found' });
+      socket.emit('join-failed', { message: 'Room not found. Please check the PIN and try again.' });
       return;
     }
+
+    // Check if host is active in the room
+    const room = rooms.get(pin);
+    if (!room.hostSocketId) {
+      socket.emit('join-failed', { message: 'Host is not currently active. Please try again later.' });
+      return;
+    }
+
     socket.join(pin);
     socket.pin = pin;
     socket.playerName = name || 'Guest';
@@ -277,10 +291,27 @@ io.on('connection', (socket) => {
     console.log(`Player ${socket.id} (${socket.playerName}) joined ${pin}`);
   });
 
-  // Make the submit handler async so we can await visual analysis
+  // Handle story generation request (on-demand from mobile client)
+  socket.on('generate-story', async (data, callback) => {
+    const { pin, shape, faces } = data;
+    if (!pin || !faces || !faces.length) {
+      if (callback) callback(null);
+      return;
+    }
+
+    try {
+      const story = await analyzeWithQWEN({ faces, shape, name: socket.playerName });
+      if (callback) callback(story || null);
+    } catch (err) {
+      console.error('Error during QWEN analysis:', err);
+      if (callback) callback(null);
+    }
+  });
+
+  // Make the submit handler async so we can process the submission
   socket.on('submit-lantern', async (data) => {
     console.log('Socket data size:', JSON.stringify(data).length);
-    const { pin, shape, faces } = data;
+    const { pin, shape, faces, customMessage, autoNarrate } = data;
     if (!pin) return;
 
     if (!faces || !Array.isArray(faces)) {
@@ -295,24 +326,48 @@ io.on('connection', (socket) => {
       name: socket.playerName,
       shape,
       faces: faces,
-      bgColor: data.bgColor || null
+      bgColor: data.bgColor || null,
+      customMessage: customMessage || '',
+      autoNarrate: autoNarrate !== false // Default to true if not specified
     };
-
-    // Direct Qwen3-VL call using API key
-    try {
-      const story = await analyzeWithQWEN({ faces, shape, name: socket.playerName });
-      if (story) {
-        lanternData.story = story;
-        console.log('QWEN story generated for lantern:', { id: socket.id, pin, preview: story.slice(0, 120) });
-      } else {
-        console.log('No story returned from QWEN for lantern', { id: socket.id, pin });
-      }
-    } catch (err) {
-      console.error('Error during QWEN analysis:', err);
-    }
 
     io.to(pin).emit('new-lantern', lanternData);
     console.log(`Lantern from ${socket.id} forwarded to host in ${pin}`);
+  });
+
+  // Host requests to kick a player by socket id
+  socket.on('kick-player', async ({ id }) => {
+    try {
+      const roomPin = socket.pin;
+      if (!roomPin) return;
+      const room = rooms.get(roomPin);
+      if (!room) return;
+
+      // Only allow the host to kick
+      if (room.hostSocketId !== socket.id) {
+        console.warn('Non-host attempted to kick:', socket.id);
+        return;
+      }
+
+      // Remove player from internal room state
+      await removePlayerFromRoom(roomPin, id);
+
+      // Notify the kicked socket directly and attempt to disconnect
+      try {
+        const targetSocket = io.sockets.sockets && io.sockets.sockets.get ? io.sockets.sockets.get(id) : (io.sockets.connected && io.sockets.connected[id]);
+        if (targetSocket && targetSocket.emit) {
+          targetSocket.emit('kicked', { reason: 'You were kicked by the host.' });
+          try { targetSocket.disconnect(true); } catch (e) { /* ignore */ }
+        }
+      } catch (e) {
+        console.warn('Failed to notify/disconnect kicked socket', e);
+      }
+
+      // Broadcast updated player-left to room so host UI updates
+      io.to(roomPin).emit('player-left', { id });
+    } catch (err) {
+      console.error('kick-player error', err);
+    }
   });
 
   socket.on('disconnect', async () => {

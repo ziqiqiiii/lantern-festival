@@ -17,16 +17,10 @@
     speedRange: { y: [0.01, 0.03], rot: [0.01, 0.015] },
     size: { width: 1, height: 1.2 },
     maxLanterns: 10,
-<<<<<<< Updated upstream
     // Fire and lighting effects toggle
     enableFireEffects: false,  // Set to false to disable fire light and emissive glow
     fireIntensity: 4,         // Base fire light intensity
     emissiveIntensity: 0.7    // Material emissive glow intensity
-=======
-    enableFireEffects: true,
-    fireIntensity: 4,
-    emissiveIntensity: 0.7
->>>>>>> Stashed changes
   };
 
   // Visual constants / fallbacks (were missing and caused runtime errors)
@@ -327,14 +321,10 @@
     const texturePromises = texUrls.map(url => loadSingleTexture(loader, url));
 
     Promise.all(texturePromises).then(textures => {
-<<<<<<< Updated upstream
       const mesh = createLanternMesh(textures, data.bgColor, data.shape);
-=======
-      const mesh = createLanternMesh(textures, data.bgColor);
       // attach author/story to mesh userData for interaction
-      mesh.userData.story = data.story || null;
+      mesh.userData.customMessage = data.customMessage || null;
       mesh.userData.author = data.name || null;
->>>>>>> Stashed changes
       initializeLanternTransform(mesh);
       addNameLabelIfPresent(mesh, data.name);
       addLanternToScene(mesh);
@@ -412,7 +402,7 @@
 
   function onPointerClick(e) {
     if (!hoveredMesh) return;
-    const story = hoveredMesh.userData.story;
+    const story = hoveredMesh.userData.customMessage;
     const author = hoveredMesh.userData.author;
     if (story) {
       showStoryOverlay(story, author);
@@ -460,7 +450,7 @@
     overlay.style.boxShadow = '0 8px 24px rgba(0,0,0,0.5)';
     overlay.style.fontSize = '14px';
     overlay.style.lineHeight = '1.5';
-    overlay.innerHTML = `<strong>${author || 'Someone'} 的故事：</strong><div style="margin-top:8px;">${escapeHtml(text)}</div>`;
+    overlay.innerHTML = `<strong>${author || 'Someone'}'s story: </strong><div style="margin-top:8px;">${escapeHtml(text)}</div>`;
     document.body.appendChild(overlay);
     storyOverlay = overlay;
 
@@ -542,7 +532,9 @@
     if (lantern.position.y <= y[1]) return;
 
     const { respawnCount } = window.LANTERN_CONFIG;
-    const shouldRespawn = respawnCount === 0 || lantern.userData.spawnCount < respawnCount;
+    // respawnCount 0 = no respawns; infinite respawns not supported yet
+    // respawnCount > 0 = respawn that many times
+    const shouldRespawn = lantern.userData.spawnCount < respawnCount;
 
     if (shouldRespawn) {
       respawnLantern(lantern);

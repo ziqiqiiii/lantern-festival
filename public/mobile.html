@@ -6,12 +6,18 @@
     <title>Lantern Festival — Mobile</title>
     <link rel="stylesheet" href="/css/style.css">
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/audio.js"></script>
   </head>
   <body class="mobile">
     <div class="container">
       <div class="mobile-header">
         <h1>🏮 Create Your Lantern</h1>
         <div id="status" class="status-text"></div>
+        <!-- Audio Controls -->
+        <div class="audio-controls">
+          <button id="toggleMusicMobile" class="audio-btn" title="Toggle Music">🎵</button>
+        </div>
+
       </div>
 
       <div class="shape-selector">
@@ -53,21 +59,40 @@
       <div class="controls-panel">
         <div class="color-controls">
           <div class="color-item">
-            <label>✏️ Ink Color</label>
+            <label for="color">✏️ Ink Color</label>
             <input type="color" id="color" value="#000000">
           </div>
           <div class="color-item">
-            <label>🎨 Background</label>
+            <label for="bgColor">🎨 Background</label>
             <input type="color" id="bgColor" value="#F5DEB3">
           </div>
           <div class="color-item">
-            <label>🗑️ Clear</label>
+            <label for="clear">🗑️ Clear</label>
             <button id="clear" class="trash-btn" title="Clear Current Face">🗑️</button>
           </div>
         </div>
+      </div>
 
-        <div class="action-buttons">
+      <div class="message-panel">
+        <div class="message-box-header">
+          <h2>✨ Your Message</h2>
+        </div>
+
+        <div class="message-input-wrapper">
+          <textarea id="messageInput" class="message-input" placeholder="Write your custom message or generate an AI story..." rows="5"></textarea>
+          <button id="generateStory" class="generate-story-btn" title="Generate AI Story">✨</button>
+        </div>
+
+        <div class="message-controls">
+          <button id="toggleNarrate" class="btn btn-secondary narrate-enabled" title="Toggle auto-narration">
+            🔊 Auto-Narrate: ON
+          </button>
           <button id="submit" class="btn btn-primary">🚀 Submit Lantern</button>
+        </div>
+
+        <div id="storyPreview" class="story-preview" style="display:none;">
+          <div class="preview-label">Generated Story Preview:</div>
+          <div id="storyPreviewText" class="preview-text"></div>
         </div>
       </div>
 

@@ -7,9 +7,104 @@
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/audio.js"></script>
   </head>
   <body>
     <div class="lobby-background" aria-hidden="true"></div>
+
+    <!-- Sidebar Toggle Button -->
+    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+      ☰
+    </button>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2>Menu</h2>
+        <button class="sidebar-close" id="sidebarClose" aria-label="Close sidebar">✕</button>
+      </div>
+
+      <!-- Connected Users Section -->
+      <div class="sidebar-section">
+        <h3 class="sidebar-section-title">Connected Users <span id="usersCount">(0)</span></h3>
+        <div class="users-list" id="usersList">
+          <p class="empty-state">No users connected</p>
+        </div>
+        <div class="users-toggle" id="usersToggle" aria-hidden="true"></div>
+      </div>
+
+      <!-- Settings Section -->
+      <div class="sidebar-section">
+        <h3 class="sidebar-section-title">Settings</h3>
+
+        <!-- Background Selection -->
+        <div class="setting-group">
+          <label class="setting-label">Background</label>
+          <div class="bg-thumbnails" id="bgThumbnails">
+            <div class="bg-thumbnail selected" data-bg="bg1.jpg" style="background-image: url('/img/bg1.jpg');" title="Background 1"></div>
+            <div class="bg-thumbnail" data-bg="bg2.jpg" style="background-image: url('/img/bg2.jpg');" title="Background 2"></div>
+            <div class="bg-thumbnail" data-bg="bg3.jpg" style="background-image: url('/img/bg3.jpg');" title="Background 3"></div>
+            <div class="bg-thumbnail" data-bg="bg4.jpg" style="background-image: url('/img/bg4.jpg');" title="Background 4"></div>
+            <div class="bg-thumbnail" data-bg="bg5.jpg" style="background-image: url('/img/bg5.jpg');" title="Background 5"></div>
+            <div class="bg-thumbnail ai" data-bg="bgAI.jpg" style="background-image: url('/img/bgAI.jpg');" title="AI Generated Background"></div>
+          </div>
+        </div>
+
+
+
+        <!-- Max Lanterns -->
+        <div class="setting-group">
+          <label class="setting-label">Max Lanterns: <span id="maxLanternsValue">10</span></label>
+          <input type="range" id="maxLanterns" class="setting-slider" min="5" max="50" value="10">
+        </div>
+
+        <!-- Respawn Count -->
+        <div class="setting-group">
+          <label class="setting-label">Respawn Count: <span id="respawnCountValue">3</span></label>
+          <input type="range" id="respawnCount" class="setting-slider" min="0" max="50" value="3">
+        </div>
+
+        <!-- Note: Room Timeout is configured server-side (ROOM_TIMEOUT_SETTING) -->
+
+        <!-- Mute Narrator (Placeholder) -->
+        <div class="setting-group checkbox-group">
+          <label class="setting-label">
+            <input type="checkbox" id="muteNarrator" class="setting-checkbox">
+            <span>Mute Narrator (Coming Soon)</span>
+          </label>
+        </div>
+
+        <!-- Mute Background Music -->
+        <div class="setting-group checkbox-group">
+          <label class="setting-label">
+            <input type="checkbox" id="muteSFX" class="setting-checkbox">
+            <span>Mute Background Music</span>
+          </label>
+        </div>
+
+        <!-- Auto-play Stories -->
+        <div class="setting-group checkbox-group">
+          <label class="setting-label">
+            <input type="checkbox" id="autoPlayStories" class="setting-checkbox" checked>
+            <span>Auto-play Stories</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div class="sidebar-divider"></div>
+
+      <!-- Info Section -->
+      <div class="sidebar-section">
+        <div id="pinInfo" style="display:none;">
+          <p class="info-text">PIN: <strong id="pinTextSidebar"></strong></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <div class="lobby">
       <header class="lobby-header">
         <div class="header-left">

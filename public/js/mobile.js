@@ -1,5 +1,12 @@
 (function () {
   const socket = io();
+  
+  // Add event listener to play background music on first click
+  document.addEventListener('click', () => {
+    if (window.LanternAudio) {
+      window.LanternAudio.playBackgroundMusic();
+    }
+  }, { once: true });
   const status = document.getElementById('status');
   const colorInput = document.getElementById('color');
   const bgColorInput = document.getElementById('bgColor');
@@ -9,6 +16,17 @@
   const faceLabel = document.getElementById('faceLabel');
   const prevBtn = document.getElementById('prevFace');
   const nextBtn = document.getElementById('nextFace');
+
+
+  // Message panel elements
+  const messageInput = document.getElementById('messageInput');
+  const generateStoryBtn = document.getElementById('generateStory');
+  const toggleNarrateBtn = document.getElementById('toggleNarrate');
+  const storyPreview = document.getElementById('storyPreview');
+  const storyPreviewText = document.getElementById('storyPreviewText');
+
+  // State for auto-narrate
+  let autoNarrate = true;
 
   // small helper to set multiple inline styles
   function setStyles(el, styles) {
@@ -45,6 +63,8 @@
   const cubeFacesWrap = document.getElementById('cubeFaces');
   const cylinderWrap = document.getElementById('cylinderFace');
   const dots = Array.from(document.querySelectorAll('.dot'));
+  // Audio controls
+  const toggleMusicBtn = document.getElementById('toggleMusicMobile');
 
   let currentFaceIndex = 0;
   let currentBgColor = bgColorInput.value; // Track current background color
@@ -296,6 +316,34 @@
     socket.emit('join-room', { pin, name: playerName });
     status.textContent = `Joined ${pin}. Draw your lantern and submit.`;
   }
+
+  // Handle join failure - redirect back to join page with error
+  socket.on('join-failed', (data) => {
+    console.error('Join failed:', data.message);
+
+    // Clear session storage
+    sessionStorage.removeItem('lantern_pin');
+    sessionStorage.removeItem('lantern_name');
+
+    // Store error message and redirect to join page
+    sessionStorage.setItem('join_error', data.message || 'Failed to join room.');
+    window.location.href = '/join';
+  });
+
+  // Handle successful join
+  socket.on('join-success', () => {
+    status.textContent = `Joined ${pin}. Draw your lantern and submit.`;
+  });
+
+  // Handle being kicked by host: store message and redirect to join page
+  socket.on('kicked', (data) => {
+    console.warn('Kicked from room:', data && data.reason);
+    try {
+      sessionStorage.setItem('join_error', data && data.reason ? data.reason : 'You were removed from the room by the host.');
+    } catch (e) { /* ignore storage errors */ }
+    // Redirect to join landing so user can re-enter or create a new session
+    window.location.href = '/join';
+  });
 
   // folding preview using CSS 3D transforms
   function showFoldingPreview(shape, facesDataUrls) {
@@ -563,6 +611,12 @@
     }
     // show folding preview
     await showFoldingPreview(shape, faces);
+    
+    // Play air woosh sound effect
+    if (window.LanternAudio) {
+      window.LanternAudio.playAirWoosh();
+    }
+    
     // emit submit with faces payload
     // Check faces data before sending
     if (!faces || !faces.length) {
@@ -581,8 +635,87 @@
       totalSize: JSON.stringify({ pin, shape, faces, bgColor: bgColorInput.value }).length
     });
 
-    // Send the data with background color
-    socket.emit('submit-lantern', { pin, shape, faces, bgColor: bgColorInput.value });
+    // Send the data with background color, custom message, and auto-narrate flag
+    socket.emit('submit-lantern', {
+      pin,
+      shape,
+      faces,
+      bgColor: bgColorInput.value,
+      customMessage: messageInput.value,
+      autoNarrate: autoNarrate
+    });
     status.textContent = 'Lantern submitted — it should appear on the host screen soon.';
+  });
+  // Toggle auto-narrate
+  toggleNarrateBtn.addEventListener('click', () => {
+    autoNarrate = !autoNarrate;
+    if (autoNarrate) {
+      toggleNarrateBtn.textContent = '🔊 Auto-Narrate: ON';
+      toggleNarrateBtn.classList.remove('narrate-disabled');
+      toggleNarrateBtn.classList.add('narrate-enabled');
+    } else {
+      toggleNarrateBtn.textContent = '🔇 Auto-Narrate: OFF';
+      toggleNarrateBtn.classList.remove('narrate-enabled');
+      toggleNarrateBtn.classList.add('narrate-disabled');
+    }
+  });
+
+
+  
+  // Audio control event listeners
+  if (toggleMusicBtn) {
+    toggleMusicBtn.addEventListener('click', () => {
+      if (window.LanternAudio) {
+        const isPlaying = window.LanternAudio.toggleBackgroundMusic();
+        toggleMusicBtn.textContent = isPlaying ? '🎵' : '🔇';
+        toggleMusicBtn.title = isPlaying ? 'Pause Music' : 'Play Music';
+      }
+    });
+  }
+  
+  // Generate AI story
+  generateStoryBtn.addEventListener('click', async () => {
+    const shape = shapeSelect.value || 'cube';
+    let faces = [];
+    if (shape === 'cube') {
+      faces = faceCanvases.map(c => c.toDataURL('image/png'));
+    } else {
+      faces = [cylinderCanvas.toDataURL('image/png')];
+    }
+
+    if (!faces || !faces.length) {
+      status.textContent = 'Error: No lantern data to analyze';
+      return;
+    }
+
+    // Show loading state
+    generateStoryBtn.classList.add('loading');
+    generateStoryBtn.disabled = true;
+    messageInput.disabled = true;
+    status.textContent = 'Generating story...';
+
+    try {
+      // Emit event to server to generate story
+      socket.emit('generate-story', { pin, shape, faces }, (story) => {
+        generateStoryBtn.classList.remove('loading');
+        generateStoryBtn.disabled = false;
+        messageInput.disabled = false;
+
+        if (story) {
+          messageInput.value = story;
+          storyPreviewText.textContent = story;
+          storyPreview.style.display = 'block';
+          status.textContent = 'Story generated! You can edit it before submitting.';
+        } else {
+          status.textContent = 'Failed to generate story. Please try again.';
+        }
+      });
+    } catch (err) {
+      console.error('Error generating story:', err);
+      generateStoryBtn.classList.remove('loading');
+      generateStoryBtn.disabled = false;
+      messageInput.disabled = false;
+      status.textContent = 'Error generating story. Please try again.';
+    }
   });
 })();
