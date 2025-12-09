@@ -6,21 +6,18 @@
     <title>Top-Middle Funnel Lanterns</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=swap" rel="stylesheet">
     <style>
         body, html { margin: 0; padding: 0; overflow-x: hidden; background-color: #050505; }
         #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: 2; pointer-events: none; }
         body {
-            height: 650vh; /* % of the screen height */
+            height: 650vh;
         }
-        /* A Centered Text Card with Margins and Background */
+        
         .text-card {
-            /* 1. CENTERING & MARGINS */
-            max-width: 1000px;       /* Never gets wider than 800px (keeps side margins) */
-            width: 90%;             /* On small phones, take up 90% of screen */
-            margin: 20px auto;     /* Top/Bottom margin: 100px. Left/Right: Auto (Centers it) */
-            
-            /* 2. BACKGROUND & SPACING */
+            max-width: 1000px;
+            width: 90%;
+            margin: 20px auto; /* Center horizontally with auto margins */
             background-color: rgba(0, 0, 0, 0.6); /* Black with 60% opacity (See-through) */
             padding: 40px;          /* Breathing room inside the box */
             border-radius: 15px;    /* Rounded corners */
@@ -28,12 +25,9 @@
         }
 
         /* 4. The Layers */
-        body {/* Ensure the body is the reference point for the video */
-            position: relative;
-        }
+        body {position: relative;}/* Ensure the body is the reference point for the video */
 
-        /* Video Styling to ensure it covers the screen */
-        video {
+        video { /* Ensure video covers the screen */
             position: absolute;
             top: 0;
             left: 0;
@@ -42,9 +36,6 @@
             object-fit: cover; /* Ensures video fills screen without stretching */
             z-index: 1;
             opacity: 0.2; /* Dims the video slightly so lanterns pop */
-            
-            transform: scale(1.0);/* 1.0 = Normal, 1.5 = 50% Zoom, 2.0 = 2x Zoom */
-            transform-origin: top center;/* 2. Lock the Zoom to the Top Center */
         }
 
         /* 5. The Content (Text) - Sits on top */
@@ -56,7 +47,6 @@
             text-shadow: 0 2px 10px rgba(0,0,0,1); 
         }
 
-        /* NEW: The Full-Screen "Welcome Mat" */
         .hero {
             height: 100vh; /* Takes up exactly 100% of the visible screen */
             width: 100%;
@@ -69,10 +59,9 @@
         h1 { font-family: 'Georgia', 'Ma Shan Zheng', serif; font-size: 3rem; margin-bottom: 20px; letter-spacing: 2px; }
         p { font-family: 'Georgia', 'Ma Shan Zheng', serif; font-size: 1.5rem; }
         
-        /* --- FEATURE SECTION STYLES --- */
         .feature-section {
             display: flex;
-            align-items: center; /* Vertically center image and text */
+            align-items: center;
             justify-content: center;
             min-height: 90vh; /* Each section takes up most of the screen */
             overflow: hidden; /* Prevents horizontal scrollbar if image is huge */
@@ -198,12 +187,12 @@
             position: relative;
             background: rgba(20, 20, 20, 0.95);
             border: 1px solid #c89216;
-            padding: 40px;
+            padding: 30px 20px;
             border-radius: 15px;
             text-align: center;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 0px 60px rgba(255, 215, 0, 0.5);
+            width: 80%;
+            max-width: 350px;
+            box-shadow: 0 0px 50px rgba(255, 215, 0, 0.5);
             animation: slideUp 0.5s ease-out;
         }
 
@@ -258,7 +247,7 @@
         }
 
         .submit-btn {
-            background: linear-gradient(135deg, #976a21 0%, #ffc164 100%);
+            background: linear-gradient(135deg, #845c1d 0%, #ffe564 100%);
             border: none;
             padding: 10px 20px;
             margin-top: 30px;
@@ -296,6 +285,28 @@
             color: #e3a318; /* Turns Gold when you hover */
         }
 
+        .error-message {
+        background: #fee;
+        color: #c33;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        font-size: 14px;
+        display: none;
+        text-align: center;
+      }
+
+      .error-message.show {
+        display: block;
+        animation: shake 0.5s;
+      }
+
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-10px); }
+        75% { transform: translateX(10px); }
+      }
+
         .divider {
             text-align: center;
             margin: 25px 0;
@@ -327,6 +338,64 @@
             font-size: 13px;
             margin-top: 20px;
         }
+
+        /* --- MOBILE SPECIFIC TWEAKS --- */
+        @media (max-width: 768px) {
+            
+            /* 1. Move buttons to be safer on small screens */
+            .button-container {
+                top: 20px;
+                right: 20px; /* Bring it closer to the edge so it's not cut off */
+                gap: 10px;   /* Move buttons closer together */
+            }
+
+            /* 2. Make buttons smaller so they fit */
+            .action-btn {
+                padding: 10px 15px; /* Smaller touch targets */
+                font-size: 1rem;    /* Smaller text */
+            }
+            
+            /* 3. Ensure Modal is definitely on top */
+            .modal-overlay {
+                z-index: 99999 !important; /* Force it above everything */
+            }
+            /* 1. Shrink the Main Hero Titles */
+            .hero h1 {
+                font-size: 2.5rem; /* Down from 3.5rem */
+                letter-spacing: 2px; /* Reduce spacing so it fits */
+                line-height: 1.2;
+            }
+
+            /* 2. Shrink the Feature Titles (Lantern Descriptions) */
+            .text-showcase h2, .text-card h2 {
+                font-size: 1.8rem; /* Down from 2.5rem */
+            }
+
+            /* 3. Shrink the Body Paragraphs */
+            .text-showcase p, .text-card p, .content p {
+                font-size: 1rem;   /* Down from 1.4rem or 1.5rem */
+                line-height: 1.5;
+            }
+
+            /* 4. Adjust the Text Card padding */
+            .text-card {
+                padding: 20px;     /* Less padding = more room for text */
+                width: 90%;        /* Make it wider on phone */
+            }
+            
+            /* 5. Stack the Feature Sections Vertically */
+            /* This ensures image sits ON TOP of text on mobile, instead of side-by-side */
+            .feature-section, .feature-section.reverse {
+                flex-direction: column; /* Stack them! */
+                height: auto;
+                padding-bottom: 50px;
+            }
+            
+            /* Add spacing between the stacked image and text */
+            .lantern-showcase {
+                margin-bottom: 20px;
+            }
+        }
     </style>
     
     <script type="importmap">
@@ -343,19 +412,20 @@
             <h1>天灯历史源流</h1>
         </section>
         <div class="button-container">
-            <button class="action-btn create-btn" onclick="window.location.href='host.html'">
+            <button class="action-btn create-btn" id="createBtn" onclick="window.location.href='host.html'">
                 Create Room
             </button>
             
-            <button class="action-btn join-btn" onclick="openJoinModal()">
+            <button class="action-btn join-btn" id="JoinBtn" onclick="openJoinModal()">
                 Join Room
             </button>
         </div>
 
         <div id="joinModal" class="modal-overlay">
             <div class="modal-box">
-                <div class="lantern-icon">🏮</div>
                 <span class="close-btn" onclick="closeJoinModal()">&times;</span>
+                
+                <div class="lantern-icon">🏮</div>
                 <h1>Join Lantern Festival</h1>
                 <p>Enter your details to create beautiful lanterns</p>
 
@@ -363,9 +433,10 @@
 
                 <h2>Your Name 名字</h2>
                 <input type="text" id="nameInput" placeholder="Enter your name" required maxlength="20" autocomplete="name">
+                
                 <h2>Room PIN 房间PIN码</h2>
                 <input type="text" id="roomCodeInput" placeholder="0000" required pattern="[0-9]{4}" maxlength="4" inputmode="numeric">
-                <button class="submit-btn" onclick="submitRoomCode()">Enter Lantern Festival</button>
+                <button class="submit-btn" id="submitBtn" onclick="submitInfo()">Enter Lantern Festival</button>
 
                 <div class="divider">
                 <span>OR</span>
@@ -603,7 +674,6 @@
                     data.glowMesh.scale.set(glowScale, glowScale, glowScale);
                     
                     // 5. Pulse Opacity
-                    // Makes the light actually dim and brighten
                     data.glowMesh.material.opacity = 0.5 + (smoothWave * 0.1);
                 }
             });
@@ -630,41 +700,138 @@
             
             return new THREE.CanvasTexture(canvas);
         }
-        // 1. OPEN THE MODAL
+        
+        /* --- GLOBAL VARIABLES --- */
+        const joinModal = document.getElementById('joinModal');
+        const nameInput = document.getElementById('nameInput');
+        const codeInput = document.getElementById('roomCodeInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const errorMsg = document.getElementById('errorMessage');
+
+        /* --- 1. MODAL CONTROLS --- */
         function openJoinModal() {
-            document.getElementById('joinModal').style.display = 'flex';
+            joinModal.style.display = 'flex';
+            nameInput.focus(); // Automatically put cursor in the name box
         }
 
-        // 2. CLOSE THE MODAL
         function closeJoinModal() {
-            document.getElementById('joinModal').style.display = 'none';
+            joinModal.style.display = 'none';
+            errorMsg.classList.remove('show'); // Hide errors when closing
         }
 
-        // 3. SUBMIT ROOM CODE
-        function submitRoomCode() {
-            const code = document.getElementById('roomCodeInput').value;
-            
-            if (code) {
-                // Redirect to host.html with the room code attached
-                // Example: host.html?room=LANTERN123
-                window.location.href = `host.html?room=${code}`;
-            } else {
-                alert("Please enter a room code!");
-            }
-        }
-
-        // OPTIONAL: Close modal if clicking outside the box
+        // Close if clicking outside the box
         window.onclick = function(event) {
-            const modal = document.getElementById('joinModal');
-            if (event.target == modal) {
-                modal.style.display = "none";
+            if (event.target === joinModal) {
+                closeJoinModal();
             }
         }
+
+        /* --- 2. INPUT FORMATTING --- */
+        codeInput.addEventListener('input', function(e) {
+            // Remove anything that is NOT a number (0-9)
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        });
+
+        /* --- 3. SUBMIT LOGIC --- */
+        function submitInfo() {
+            const nameValue = nameInput.value.trim();
+            const codeValue = codeInput.value.trim();
+
+            // A. VALIDATION: Check if empty
+            if (!nameValue) {
+                showError("Please enter your name.");
+                return;
+            }
+            if (codeValue.length !== 4) {
+                showError("Please enter a 4-digit Room Code.");
+                return;
+            }
+
+            // B. UI FEEDBACK: Disable button immediately
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Checking...'; // Changed to "Checking"
+
+            // C. THE CHECK (Assume server check)
+            fetch(`/check-room/${codeValue}`)
+                .then(res => {
+                    if (!res.ok) {
+                        // If server says "404 Not Found" or error
+                        throw new Error('room-not-active');
+                    }
+                    return res.json();
+                })
+                .then(roomInfo => {
+                    // --- SUCCESS! ROOM EXISTS ---                    
+                    submitBtn.textContent = 'Joining...';
+                    
+                    // 1. Store Data
+                    sessionStorage.setItem('lantern_pin', codeValue);
+                    sessionStorage.setItem('lantern_name', nameValue);
+
+                    // 2. Build URL
+                    const params = new URLSearchParams();
+                    params.append('pin', codeValue);
+                    params.append('username', nameValue);
+
+                    // 3. Redirect
+                    window.location.href = `mobile.html?${params.toString()}`;
+                })
+                .catch(err => {
+                    // --- FAILURE! ROOM ISSUE ---                    
+                    // Re-enable the button so they can try again
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Enter Lantern Festival';
+                    
+                    if (err.message === 'room-not-active') {
+                        showRoomNotActiveMessage();
+                    } else {
+                        console.error('Room check failed', err);
+                        // Fallback: If you don't have a backend yet, 
+                        // you might want to allow it anyway for testing:
+                        // window.location.href = `mobile.html?pin=${codeValue}...`;
+                        showError("Could not connect to room server.");
+                    }
+                });
+        }
+
+        /* --- 4. HELPER FUNCTIONS --- */
+        function showError(message) {
+            errorMsg.textContent = message;
+            errorMsg.classList.add('show');
+            
+            // Shake the box slightly (fun effect)
+            submitBtn.style.transform = "translateX(5px)";
+            setTimeout(() => submitBtn.style.transform = "translateX(0)", 100);
+        }
+
+        function showRoomNotActiveMessage() {
+            let el = document.getElementById('roomNotActiveMsg');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'roomNotActiveMsg';
+                el.style.cssText = 'position:fixed;left:50%; top:50%;transform: translate(-50%, -50%); padding:12px;border-radius:8px;background:#111;color:#ffd700;z-index:9999;text-align:center;';
+                el.innerHTML = 'That room is not active. Check the PIN or ask the host to reopen the room. <button id="retryCheck">Retry</button>';
+                document.body.appendChild(el);
+                document.getElementById('retryCheck').addEventListener('click', () => {
+                    el.remove();
+                    // re-run whatever function initiated the check
+                    submitRoomCode();
+                });
+            } else {
+                el.style.display = 'block';
+            }
+        }
+
+        // Reset button if they hit the "Back" button to return here
+        window.addEventListener('pageshow', () => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Enter Lantern Festival';
+        });
 
         // Expose handlers to global scope so inline onclick attributes work
         window.openJoinModal = openJoinModal;
         window.closeJoinModal = closeJoinModal;
-        window.submitRoomCode = submitRoomCode;
+        window.submitInfo = submitInfo;
     </script>
 </body>
 </html>
