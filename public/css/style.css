@@ -575,9 +575,9 @@ body.mobile {
 
 .sidebar {
   position: fixed;
-  left: -250px;
+  left: -300px;
   top: 0;
-  width: 250px;
+  width: 300px;
   height: 100vh;
   background: rgba(20, 20, 30, 0.95);
   backdrop-filter: blur(10px);
@@ -803,6 +803,8 @@ body.mobile {
   box-shadow: 0 0 10px rgba(102, 126, 234, 0.4);
   transition: all 0.2s;
   border: 2px solid rgba(255, 255, 255, 0.3);
+  margin-top: -4.5px; /* Moves it UP to center it on the 6px track */
+  
 }
 
 .setting-slider::-webkit-slider-thumb:hover {
@@ -933,3 +935,92 @@ body.mobile {
   pointer-events: none;
 }
 
+/* --- 1. Widen the Sidebar --- */
+/* We need more room for 2 columns to look good */
+.sidebar {
+  width: 380px; 
+  left: -380px; /* Must match width to hide completely */
+}
+
+/* Responsive fix: On mobile, max out at screen width */
+@media (max-width: 380px) {
+  .sidebar {
+    width: 100%;
+    left: -100%;
+  }
+}
+
+/* --- 2. The 2-Column Grid --- */
+.bg-thumbnails {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Exact 50/50 split */
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* --- 3. The Images (Uncropped) --- */
+.bg-thumbnail {
+  width: 80%;
+  /* 16/9 Ratio prevents cropping of landscape wallpapers */
+  aspect-ratio: 16/9; 
+  
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background-size: cover; 
+  background-position: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.bg-thumbnail:hover {
+  transform: scale(1.03);
+  z-index: 1; /* Pop above neighbors */
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+.bg-thumbnail.selected {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px #667eea;
+}
+
+/* --- 4. Force Left Alignment for Everything Else --- */
+.sidebar-section, .setting-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Pushes content to the left */
+  text-align: left;
+  width: 100%;
+}
+
+/* Fix checkbox alignment specifically */
+.checkbox-group .setting-label {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+/* --- FIX: Prevent Horizontal Scroll --- */
+
+.sidebar {
+  overflow-x: hidden; /* Cuts off anything sticking out the side */
+  overflow-y: auto;   /* Keeps vertical scrolling enabled */
+  box-sizing: border-box; /* Includes padding in width calculation */
+}
+
+/* Ensure all elements inside respect the width */
+.sidebar * {
+  box-sizing: border-box;
+  max-width: 100%; /* Prevents inputs/images from pushing wider than the sidebar */
+}
+
+/* Tweak the grid to ensure it fits comfortably */
+.bg-thumbnails {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  margin: 0;      /* Remove margins that might push it out */
+  padding: 2px;   /* Tiny padding prevents hover borders from getting cut off */
+}
