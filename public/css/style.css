@@ -62,7 +62,6 @@ body.mobile {
   display: flex;
   justify-content: center;
   gap: 15px;
-  margin-top: 15px;
 }
 
 .audio-btn {
@@ -325,14 +324,14 @@ body.mobile {
   border: 3px solid rgba(255, 107, 107, 0.6);
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.1);
-  font-size: 30px;
+  font-size: 32px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  padding: 0;
+  padding: 30px;
 }
 
 .trash-btn:hover {
@@ -829,6 +828,8 @@ body.mobile {
   box-shadow: 0 0 10px rgba(102, 126, 234, 0.4);
   transition: all 0.2s;
   border: 2px solid rgba(255, 255, 255, 0.3);
+  margin-top: -4.5px; /* Moves it UP to center it on the 6px track */
+
 }
 
 .setting-slider::-webkit-slider-thumb:hover {
@@ -945,4 +946,3 @@ body.mobile {
     grid-template-columns: repeat(2, 1fr);
   }
 }
-

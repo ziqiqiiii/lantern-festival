@@ -69,19 +69,18 @@
 
         <!-- Note: Room Timeout is configured server-side (ROOM_TIMEOUT_SETTING) -->
 
+        <!-- Background Music Volume -->
+        <div class="setting-group">
+          <label class="setting-label">Music Volume: <span id="sfxVolumeValue">30</span>%</label>
+          <input type="range" id="sfxVolume" class="setting-slider" min="0" max="100" value="30">
+        </div>
+
         <!-- Mute Narrator (Placeholder) -->
+        <div class="setting-group"></div>
         <div class="setting-group checkbox-group">
           <label class="setting-label">
             <input type="checkbox" id="muteNarrator" class="setting-checkbox">
             <span>Mute Narrator (Coming Soon)</span>
-          </label>
-        </div>
-
-        <!-- Mute Background Music -->
-        <div class="setting-group checkbox-group">
-          <label class="setting-label">
-            <input type="checkbox" id="muteSFX" class="setting-checkbox">
-            <span>Mute Background Music</span>
           </label>
         </div>
 

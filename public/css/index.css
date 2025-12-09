@@ -1,6 +1,7 @@
 body, html { margin: 0; padding: 0; overflow-x: hidden; background-color: #050505; }
 #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: 2; pointer-events: none; }
-body {
+/* Large homepage tall body is scoped to .home-hero so other pages aren't affected */
+.home-hero {
     height: 650vh;
 }
 

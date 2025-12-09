@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Top-Middle Funnel Lanterns</title>
+    <title>Lantern Festival — Home</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=swap" rel="stylesheet">
@@ -13,7 +13,7 @@
         { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
     </script>
 </head>
-<body>
+<body class="home-hero">
     <video src="./video/background_video.mp4" autoplay loop muted playsinline></video>
     <canvas id="bg-canvas"></canvas>
 
@@ -26,7 +26,7 @@
             <button class="action-btn create-btn" id="createBtn" onclick="window.location.href='host.html'">
                 Create Room
             </button>
-            
+
             <button class="action-btn join-btn" id="JoinBtn" onclick="openJoinModal()">
                 Join Room
             </button>
@@ -35,7 +35,7 @@
         <div id="joinModal" class="modal-overlay">
             <div class="modal-box">
                 <span class="close-btn" onclick="closeJoinModal()">&times;</span>
-                
+
                 <div class="lantern-icon">🏮</div>
                 <h1>Join Lantern Festival</h1>
                 <p>Enter your details to create beautiful lanterns</p>
@@ -44,7 +44,7 @@
 
                 <h2>Your Name 名字</h2>
                 <input type="text" id="nameInput" placeholder="Enter your name" required maxlength="20" autocomplete="name">
-                
+
                 <h2>Room PIN 房间PIN码</h2>
                 <input type="text" id="roomCodeInput" placeholder="0000" required pattern="[0-9]{4}" maxlength="4" inputmode="numeric">
                 <button class="submit-btn" id="submitBtn" onclick="submitInfo()">Enter Lantern Festival</button>
@@ -58,7 +58,7 @@
                 </div>
             </div>
         </div>
-                
+
         <div class="feature-section">
             <div class="lantern-showcase left">
                 <img src="./img/zhugeliang_lantern.png" class="feature-img drift-slow" alt="Health Lantern">
@@ -115,7 +115,7 @@
             <button class="action-btn create-btn" onclick="window.location.href='host.html'">
                 Create Room
             </button>
-            
+
             <button class="action-btn join-btn" onclick="openJoinModal()">
                 Join Room
             </button>

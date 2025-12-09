@@ -21,10 +21,11 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   const respawnCountInput = document.getElementById('respawnCount');
   const respawnCountValue = document.getElementById('respawnCountValue');
   const muteNarratorCheckbox = document.getElementById('muteNarrator');
-  const muteSFXCheckbox = document.getElementById('muteSFX');
+  const sfxVolumeInput = document.getElementById('sfxVolume');
+  const sfxVolumeValue = document.getElementById('sfxVolumeValue');
   const autoPlayStoriesCheckbox = document.getElementById('autoPlayStories');
   const bgThumbnails = document.querySelectorAll('.bg-thumbnail');
-  
+
 
 
   // Host page elements
@@ -68,7 +69,7 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     maxLanterns: 10,
     respawnCount: 3,
     muteNarrator: false,
-    muteSFX: false,
+    bgVolume: 20,
     autoPlayStories: true,
     bgImage: 'bg1.jpg'
   };
@@ -87,7 +88,7 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     settings.maxLanterns = 10;
     settings.respawnCount = 3;
     settings.muteNarrator = false;
-    settings.muteSFX = false;
+    settings.bgVolume = 20;
     settings.autoPlayStories = true;
     settings.bgImage = 'bg1.jpg';
     saveSettings();
@@ -106,7 +107,9 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     respawnCountInput.value = settings.respawnCount;
     respawnCountValue.textContent = settings.respawnCount;
     muteNarratorCheckbox.checked = settings.muteNarrator;
-    muteSFXCheckbox.checked = settings.muteSFX;
+    // volume slider reflects background music level (0-100)
+    if (sfxVolumeInput) sfxVolumeInput.value = settings.bgVolume;
+    if (sfxVolumeValue) sfxVolumeValue.textContent = settings.bgVolume;
     autoPlayStoriesCheckbox.checked = settings.autoPlayStories;
 
     // Update background thumbnail selection
@@ -125,6 +128,21 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
 
     // Apply lantern config
     applyLanternConfig();
+
+    // Apply audio volume setting
+    try {
+      if (window.LanternAudio) {
+        const vol = (settings.bgVolume || 0) / 100;
+        if (vol === 0) {
+          window.LanternAudio.pauseBackgroundMusic();
+        } else {
+          window.LanternAudio.setBackgroundVolume(vol);
+          window.LanternAudio.playBackgroundMusic();
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to apply background volume', e);
+    }
 
     // Ensure slider visuals update correctly after programmatic value changes
     // Dispatch an 'input' event so any UI bindings/listeners update thumbs and styles
@@ -146,7 +164,7 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     applyLanternConfig();
     socket.emit('settings-updated', settings);
   });
-  
+
 
   maxLanternsInput.addEventListener('change', () => updateSliderFill(maxLanternsInput));
 
@@ -166,21 +184,28 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     socket.emit('settings-updated', settings);
   });
 
-  muteSFXCheckbox.addEventListener('change', (e) => {
-    settings.muteSFX = e.target.checked;
-    saveSettings();
-    
-    // Use this checkbox to control background music instead
-    if (window.LanternAudio) {
-      if (settings.muteSFX) {
-        window.LanternAudio.pauseBackgroundMusic();
-      } else {
-        window.LanternAudio.playBackgroundMusic();
+  // Background music volume slider
+  if (sfxVolumeInput) {
+    sfxVolumeInput.addEventListener('input', (e) => {
+      settings.bgVolume = parseInt(e.target.value) || 0;
+      if (sfxVolumeValue) sfxVolumeValue.textContent = settings.bgVolume;
+      updateSliderFill(sfxVolumeInput);
+      saveSettings();
+
+      if (window.LanternAudio) {
+        const vol = settings.bgVolume / 100;
+        if (vol === 0) {
+          window.LanternAudio.pauseBackgroundMusic();
+        } else {
+          window.LanternAudio.setBackgroundVolume(vol);
+          window.LanternAudio.playBackgroundMusic();
+        }
       }
-    }
-    
-    socket.emit('settings-updated', settings);
-  });
+
+      socket.emit('settings-updated', settings);
+    });
+    sfxVolumeInput.addEventListener('change', () => updateSliderFill(sfxVolumeInput));
+  }
 
   autoPlayStoriesCheckbox.addEventListener('change', (e) => {
     settings.autoPlayStories = e.target.checked;
@@ -259,7 +284,7 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
 
   // Load settings on page load
   loadSettings();
-  
+
   // Add event listener to play background music on first click
   document.addEventListener('click', () => {
     if (window.LanternAudio) {
@@ -476,13 +501,15 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     }
 
     // Guard against duplicate spawns for the same submission (some clients may
-    // re-send or the same event might be emitted twice). If already handled,
-    // skip.
-    if (_wasLanternSpawned(data.id || data.socketId || data._cid)) {
-      console.warn('Duplicate lantern event ignored for id:', data.id || data.socketId || data._cid);
+    // re-send or the same event might be emitted twice). Build a more robust
+    // fingerprint using any available id or the image/faces payload so identical
+    // lanterns aren't spawned twice.
+    const spawnKey = data.id || data.socketId || data._cid || data.imageDataUrl || (data.faces ? data.faces.join('|') : null);
+    if (_wasLanternSpawned(spawnKey)) {
+      console.warn('Duplicate lantern event ignored for key:', spawnKey);
       return;
     }
-    _markLanternSpawned(data.id || data.socketId || data._cid);
+    _markLanternSpawned(spawnKey);
 
     // spawn on THREE.js stage if available
     if (window.spawnLanternOnStage) {
@@ -505,6 +532,16 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   // Replace existing showLanternStory with bilingual-aware version
   function showLanternStory(textOrPair, author) {
     try {
+      // Cancel if message is empty/whitespace
+      if (typeof textOrPair === 'string') {
+        if (!textOrPair || String(textOrPair).trim().length === 0) return;
+      } else if (textOrPair && typeof textOrPair === 'object') {
+        const en = (textOrPair.en || '').toString().trim();
+        const zh = (textOrPair.zh || '').toString().trim();
+        if (!en && !zh) return;
+      } else {
+        return;
+      }
       // remove existing
       if (storyOverlay && storyOverlay.parentNode) storyOverlay.remove();
 

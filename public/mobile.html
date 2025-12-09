@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/audio.js"></script>
     <link rel="stylesheet" href="/css/mobile.css">
   </head>
   <body>
@@ -18,10 +19,6 @@
       <div class="mobile-header">
         <h1>🏮 Create Your Lantern</h1>
         <div id="status" class="status-text"></div>
-        <!-- Audio Controls -->
-        <div class="audio-controls" style="margin-top: 10px;">
-          <button id="toggleMusicMobile" class="audio-btn" title="Toggle Music">🎵</button>
-        </div>
       </div>
 
       <div class="shape-selector">
@@ -30,6 +27,10 @@
           <option value="cube">Cube (4 faces)</option>
           <option value="cylinder">Cylinder (wrap)</option>
         </select>
+        <!-- Audio Controls -->
+        <div class="audio-controls">
+          <button id="toggleMusicMobile" class="audio-btn" title="Toggle Music">🎵</button>
+        </div>
       </div>
 
       <div id="cubeFaces" style="margin-top:5px;">
@@ -39,7 +40,7 @@
           <canvas class="face-canvas" data-face="1" width="300" height="300" style="display:none;"></canvas>
           <canvas class="face-canvas" data-face="2" width="300" height="300" style="display:none;"></canvas>
           <canvas class="face-canvas" data-face="3" width="300" height="300" style="display:none;"></canvas>
-          
+
           <div class="gallery-controls" style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
             <button id="prevFace" class="nav-btn">&lt;</button>
             <div class="dots">
@@ -63,11 +64,11 @@
       <div class="controls-panel">
         <div class="color-controls">
           <div class="color-item">
-            <label for="color">Ink</label>
+            <label for="color">Ink Color</label>
             <input type="color" id="color" value="#000000">
           </div>
           <div class="color-item">
-            <label for="bgColor">Bg</label>
+            <label for="bgColor">Background</label>
             <input type="color" id="bgColor" value="#F5DEB3">
           </div>
           <div class="color-item">

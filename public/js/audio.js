@@ -30,16 +30,45 @@
     // Create background audio
     audioElements.background = new Audio();
     audioElements.background.loop = true;
-    audioElements.background.volume = 0.3;
-    
+    // Default volume: mobile should use 20%, hosts use 30%
+    const isMobilePage = !!document.getElementById('toggleMusicMobile');
+    audioElements.background.volume = isMobilePage ? 0.2 : 0.3;
+
     // Create air woosh sound effect
     audioElements.airWoosh = new Audio();
-    audioElements.airWoosh.volume = 0.7;
-    
+    audioElements.airWoosh.volume = 0.5;
+
     // Try to load local files first, fallback to external URLs
     loadAudioWithFallback(audioElements.background, audioSources.background, fallbackUrls.background);
     loadAudioWithFallback(audioElements.airWoosh, audioSources.airWoosh, fallbackUrls.airWoosh);
-    
+
+    // Apply saved host volume settings (if available) so reloads respect host choice
+    // Do not apply host-saved volume on mobile pages — mobile should keep its
+    // own default and only respond to mobile-specific controls.
+    try {
+      const saved = localStorage.getItem('lanternHostSettings');
+      if (!isMobilePage && saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.bgVolume === 'number') {
+          const vol = Math.max(0, Math.min(100, parsed.bgVolume)) / 100;
+          audioElements.background.volume = vol;
+          // If volume is zero, ensure we don't auto-play
+          if (vol === 0) {
+            audioState.backgroundPlaying = false;
+          } else {
+            // Try to play — may be blocked by browser autoplay rules
+            audioElements.background.play().then(() => {
+              audioState.backgroundPlaying = true;
+            }).catch(() => {
+              // ignore play errors (will attempt again on user interaction)
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to apply saved background volume', e);
+    }
+
     console.log('Audio elements initialized');
   }
 
@@ -47,7 +76,7 @@
   function loadAudioWithFallback(audioElement, localPath, fallbackUrl) {
     // First try local path
     audioElement.src = localPath;
-    
+
     // Set up error handling to fallback
     audioElement.addEventListener('error', () => {
       console.warn(`Failed to load ${localPath}, falling back to ${fallbackUrl}`);
@@ -62,20 +91,20 @@
       console.log('No background audio element found');
       return;
     }
-    
+
     if (audioState.muted) {
       console.log('Audio is muted, not playing');
       audioElements.background.muted = true;
       return;
     }
-    
+
     console.log('Playing background music');
     audioElements.background.play().then(() => {
       console.log('Background music playing successfully');
     }).catch(e => {
       console.warn('Failed to play background music:', e);
     });
-    
+
     audioState.backgroundPlaying = true;
   }
 
@@ -86,7 +115,7 @@
       console.log('No background audio element found');
       return;
     }
-    
+
     audioElements.background.pause();
     audioState.backgroundPlaying = false;
     console.log('Background music paused');
@@ -100,19 +129,20 @@
     } else {
       playBackgroundMusic();
     }
-    
+
     console.log('New state:', audioState.backgroundPlaying);
     return audioState.backgroundPlaying;
   }
 
   // Play air woosh sound effect
   function playAirWoosh() {
-    if (!audioElements.airWoosh) return;
-    
+    if (!audioElements.airWoosh) return Promise.resolve();
+
     // Reset to start in case it's still playing
     audioElements.airWoosh.currentTime = 0;
-    
-    audioElements.airWoosh.play().catch(e => {
+
+    // Return the promise so callers can await playback start
+    return audioElements.airWoosh.play().catch(e => {
       console.warn('Failed to play air woosh sound:', e);
     });
   }
@@ -120,15 +150,15 @@
   // Toggle mute
   function toggleMute() {
     audioState.muted = !audioState.muted;
-    
+
     if (audioElements.background) {
       audioElements.background.muted = audioState.muted;
     }
-    
+
     if (audioElements.airWoosh) {
       audioElements.airWoosh.muted = audioState.muted;
     }
-    
+
     return audioState.muted;
   }
 
@@ -152,7 +182,7 @@
   } else {
     initAudio();
   }
-  
+
   // Try to play background music automatically when audio is initialized
   document.addEventListener('DOMContentLoaded', () => {
     // Small delay to ensure everything is loaded
@@ -160,7 +190,7 @@
       if (window.LanternAudio && !audioState.muted) {
         // Try to play background music
         window.LanternAudio.playBackgroundMusic();
-        
+
         // Also try to play after first user interaction to comply with browser policies
         document.body.addEventListener('click', function playOnFirstInteraction() {
           if (window.LanternAudio && !audioState.muted && !audioState.backgroundPlaying) {
@@ -170,7 +200,7 @@
           document.body.removeEventListener('click', playOnFirstInteraction);
         }, { once: true });
       }
-      
+
 
     }, 500);
   });

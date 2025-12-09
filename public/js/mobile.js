@@ -32,13 +32,11 @@
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', applyTransformVars);
   })();
-  
-  // Add event listener to play background music on first click
-  document.addEventListener('click', () => {
-    if (window.LanternAudio) {
-      window.LanternAudio.playBackgroundMusic();
-    }
-  }, { once: true });
+
+  // Try to play background music on load
+  if (window.LanternAudio) {
+    window.LanternAudio.playBackgroundMusic();
+  }
   const status = document.getElementById('status');
   const colorInput = document.getElementById('color');
   const bgColorInput = document.getElementById('bgColor');
@@ -379,7 +377,7 @@
   });
 
   // folding preview using CSS 3D transforms
-  function showFoldingPreview(shape, facesDataUrls) {
+  function showFoldingPreview(shape, facesDataUrls, onFloatStart) {
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
       overlay.className = 'fold-overlay';
@@ -490,6 +488,9 @@
           // Float upward and fade the preview after a short display period
           const floatDelay = 1500;
           setTimeout(() => {
+            // notify caller that float is starting (so SFX can play exactly now)
+            try { if (typeof onFloatStart === 'function') onFloatStart(); } catch (e) { /* ignore */ }
+
             // animate overlay upward and fade - use viewport height for consistent off-screen animation
             scene.style.transition = 'transform 1.7s ease-in';
             scene.style.transform = 'translateY(-150vh) rotateX(-25deg) rotateY(-25deg)';
@@ -617,6 +618,9 @@
 
             // Float away smoothly
             setTimeout(() => {
+              // notify caller that float is starting
+              try { if (typeof onFloatStart === 'function') onFloatStart(); } catch (e) { /* ignore */ }
+
               scene.style.transition = 'transform 2s ease-in';
               scene.style.transform = 'translateX(120px) translateY(-150vh) rotateX(15deg) rotateY(90deg)';
 
@@ -634,51 +638,7 @@
     });
   }
 
-  submitBtn.addEventListener('click', async () => {
-    const shape = shapeSelect.value || 'cube';
-    let faces = [];
-    if (shape === 'cube') {
-      faces = faceCanvases.map(c => c.toDataURL('image/png'));
-    } else {
-      faces = [cylinderCanvas.toDataURL('image/png')];
-    }
-    // show folding preview
-    await showFoldingPreview(shape, faces);
-    
-    // Play air woosh sound effect
-    if (window.LanternAudio) {
-      window.LanternAudio.playAirWoosh();
-    }
-    
-    // emit submit with faces payload
-    // Check faces data before sending
-    if (!faces || !faces.length) {
-      console.error('No face data to submit');
-      status.textContent = 'Error: No lantern data to submit';
-      return;
-    }
-
-    // Log submission details
-    console.log('Submitting lantern:', {
-      pin,
-      shape,
-      faceCount: faces.length,
-      bgColor: bgColorInput.value,
-      sampleFace: faces[0]?.substring(0, 50),
-      totalSize: JSON.stringify({ pin, shape, faces, bgColor: bgColorInput.value }).length
-    });
-
-    // Send the data with background color, custom message, and auto-narrate flag
-    socket.emit('submit-lantern', {
-      pin,
-      shape,
-      faces,
-      bgColor: bgColorInput.value,
-      customMessage: messageInput.value,
-      autoNarrate: autoNarrate
-    });
-    status.textContent = 'Lantern submitted — it should appear on the host screen soon.';
-  });
+  // removed duplicate submit handler earlier to ensure we only submit once
   // Toggle auto-narrate
   toggleNarrateBtn.addEventListener('click', () => {
     autoNarrate = !autoNarrate;
@@ -694,18 +654,34 @@
   });
 
 
-  
+
   // Audio control event listeners
   if (toggleMusicBtn) {
+    // Initialize button icon based on mute state (if available)
+    try {
+      if (window.LanternAudio && typeof window.LanternAudio.getState === 'function') {
+        const st = window.LanternAudio.getState();
+        toggleMusicBtn.textContent = st.muted ? '🔇' : (st.backgroundPlaying ? '🎵' : '🎵');
+        toggleMusicBtn.title = st.muted ? 'Unmute Music' : 'Toggle Music';
+      }
+    } catch (e) { /* ignore */ }
+
+    // Use mute toggle so the first click immediately mutes audio even
+    // if playback was blocked by autoplay policies.
     toggleMusicBtn.addEventListener('click', () => {
-      if (window.LanternAudio) {
+      if (window.LanternAudio && typeof window.LanternAudio.toggleMute === 'function') {
+        const isMuted = window.LanternAudio.toggleMute();
+        toggleMusicBtn.textContent = isMuted ? '🔇' : '🎵';
+        toggleMusicBtn.title = isMuted ? 'Unmute Music' : 'Mute Music';
+      } else if (window.LanternAudio) {
+        // Fallback: toggle play/pause if mute API not available
         const isPlaying = window.LanternAudio.toggleBackgroundMusic();
         toggleMusicBtn.textContent = isPlaying ? '🎵' : '🔇';
         toggleMusicBtn.title = isPlaying ? 'Pause Music' : 'Play Music';
       }
     });
   }
-  
+
   // Generate AI story
   let storyBilingual = null; // store { en, zh } when generated
 
@@ -771,8 +747,30 @@
     } else {
       faces = [cylinderCanvas.toDataURL('image/png')];
     }
+    // Check faces data before sending
+    if (!faces || !faces.length) {
+      console.error('No face data to submit');
+      status.textContent = 'Error: No lantern data to submit';
+      return;
+    }
 
-    // ...existing validation...
+    // Start the preview and play whoosh exactly when the floating phase begins.
+    let whooshPromise = Promise.resolve();
+    const previewPromise = showFoldingPreview(shape, faces, () => {
+      // This callback runs right when the float animation begins
+      if (window.LanternAudio && typeof window.LanternAudio.playAirWoosh === 'function') {
+        try {
+          whooshPromise = window.LanternAudio.playAirWoosh();
+        } catch (e) {
+          whooshPromise = Promise.resolve();
+        }
+      }
+    });
+
+    // Wait for the visual preview to complete before submitting to host
+    await previewPromise;
+    // Optionally wait for whoosh startup to settle
+    try { await whooshPromise; } catch (e) { /* ignore */ }
 
     const payload = {
       _cid: makeClientId(),
@@ -786,7 +784,7 @@
     };
     socket.emit('submit-lantern', payload);
     status.textContent = 'Lantern submitted — it should appear on the host screen soon.';
-    
+
     // Clear cached AI pair so the next submission is fresh (not tied to previous AI)
     storyBilingual = null;
     storyPreview.style.display = 'none';
