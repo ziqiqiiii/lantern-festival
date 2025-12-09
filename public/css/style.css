@@ -804,7 +804,7 @@ body.mobile {
   transition: all 0.2s;
   border: 2px solid rgba(255, 255, 255, 0.3);
   margin-top: -4.5px; /* Moves it UP to center it on the 6px track */
-  
+
 }
 
 .setting-slider::-webkit-slider-thumb:hover {
@@ -961,7 +961,7 @@ body.mobile {
 
 /* --- 3. The Images (Uncropped) --- */
 .bg-thumbnail {
-  width: 80%;
+  width: 100%;
   /* 16/9 Ratio prevents cropping of landscape wallpapers */
   aspect-ratio: 16/9; 
   
