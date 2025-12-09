@@ -51,7 +51,7 @@
         .content { 
             position: relative; 
             z-index: 10; 
-            color: #e3a318; 
+            color: #e3a318; /* Gold Text */
             text-align: center;  
             text-shadow: 0 2px 10px rgba(0,0,0,1); 
         }
@@ -66,7 +66,7 @@
             align-items: center;     /* Centers horizontally */
         }
 
-        h1 { font-family: 'Georgia', 'ZCOOL XiaoWei', serif; font-size: 3rem; margin-bottom: 20px; letter-spacing: 2px; }
+        h1 { font-family: 'Georgia', 'Ma Shan Zheng', serif; font-size: 3rem; margin-bottom: 20px; letter-spacing: 2px; }
         p { font-family: 'Georgia', 'Ma Shan Zheng', serif; font-size: 1.5rem; }
         
         /* --- FEATURE SECTION STYLES --- */
@@ -146,6 +146,12 @@
             justify-content: center;
             z-index: 15;        /* Ensures it sits ON TOP of the Hero text */
         }
+        .button-container-2{
+            display: flex;
+            gap: 20px; /* Space between buttons */
+            justify-content: center;
+            z-index: 15;        /* Ensures it sits ON TOP of the Hero text */
+        }
 
         /* --- MAIN BUTTON STYLES --- */
         .action-btn {
@@ -159,14 +165,14 @@
         }
 
         .create-btn {
-            background-color: #ffd700; /* Gold */
+            background-color: #e3a318; /* Gold */
             color: #000;
         }
 
         .join-btn {
             background-color: transparent;
-            border: 2px solid #ffd700;
-            color: #ffd700;
+            border: 2px solid #e3a318;
+            color: #e3a318;
         }
 
         .action-btn:hover {
@@ -218,24 +224,32 @@
         }
 
         .modal-box h2 {
-            padding-left: 10%;
+            padding-left: 7%;
             color: #ffffff;
             font-family: 'Georgia', 'ma shan zheng', serif;
             font-size: 1rem;
             text-align: left;
+            margin-top: 30px;
+            margin-bottom: 8px;
+        }
+        .modal-box h1 {
+            color: #ffffff;
+            font-family: 'Georgia', 'ma shan zheng', serif;
+            font-size: 2rem;
+            margin: 0px 10px;
         }
         .modal-box p {
             color: #ffffff;
             font-family: 'Georgia', 'ma shan zheng', serif;
             font-size: 1rem;
-            margin-top: 0;
+            margin-bottom: 30px;
         }
 
         .modal-box input {
             width: 80%;
             padding: 10px;
-            margin: 10px 0;
             font-size: 1rem;
+            font-family: inherit;
             text-align: center;
             border-radius: 5px;
             border: 2px solid #555;
@@ -247,20 +261,21 @@
             background: linear-gradient(135deg, #976a21 0%, #ffc164 100%);
             border: none;
             padding: 10px 20px;
+            margin-top: 30px;
             font-weight: bold;
             cursor: pointer;
             border-radius: 5px;
             transition: transform 0.2s, box-shadow 0.2s;
         }
-        .join-button:hover {
+        .submit-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(157, 120, 27, 0.3);
         }
-        .join-button:active { /*After they key room no.*/
+        .submit-btn:active { /*After they key room no.*/
             transform: translateY(0);
         }
 
-        .join-button:disabled { /*Before they key room no.*/
+        .submit-btn:disabled { /*Before they key room no.*/
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
@@ -278,29 +293,7 @@
             transition: color 0.3s;
         }
         .close-btn:hover {
-            color: #ffd700; /* Turns Gold when you hover */
-        }
-
-        .error-message {
-            background: #fee;
-            color: #c33;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-            display: none;
-            text-align: center;
-        }
-
-        .error-message.show {
-            display: block;
-            animation: shake 0.5s;
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-10px); }
-            75% { transform: translateX(10px); }
+            color: #e3a318; /* Turns Gold when you hover */
         }
 
         .divider {
@@ -346,9 +339,8 @@
 
     <div class="content">
         <section class="hero">
-            <h1>The Festival of Lights</h1>
-            <h1>上元节</h1>
-            <p>Scroll down to release your wishes...</p>
+            <h1>History of Chinese Sky Lanterns</h1>
+            <h1>天灯历史源流</h1>
         </section>
         <div class="button-container">
             <button class="action-btn create-btn" onclick="window.location.href='host.html'">
@@ -366,9 +358,12 @@
                 <span class="close-btn" onclick="closeJoinModal()">&times;</span>
                 <h1>Join Lantern Festival</h1>
                 <p>Enter your details to create beautiful lanterns</p>
+
+                <div id="errorMessage" class="error-message"></div>
+
                 <h2>Your Name 名字</h2>
                 <input type="text" id="nameInput" placeholder="Enter your name" required maxlength="20" autocomplete="name">
-                <h2>Room PIN 房号</h2>
+                <h2>Room PIN 房间PIN码</h2>
                 <input type="text" id="roomCodeInput" placeholder="0000" required pattern="[0-9]{4}" maxlength="4" inputmode="numeric">
                 <button class="submit-btn" onclick="submitRoomCode()">Enter Lantern Festival</button>
 
@@ -434,7 +429,7 @@
                 <p>如今，天灯早已褪去军事外衣，化作承载心愿的画布。在平溪天灯节等盛大庆典中，成千上万的人们齐聚，将健康、姻缘、富贵等最深切的期盼书写于灯面。当万千天灯同时升起，便汇成一条缓缓流淌的星河，成为人们告别往昔、寄梦苍穹的集体仪式。</p>
             </div>
         </div>
-        <div class="button-container">
+        <div class="button-container-2">
             <button class="action-btn create-btn" onclick="window.location.href='host.html'">
                 Create Room
             </button>
@@ -442,16 +437,6 @@
             <button class="action-btn join-btn" onclick="openJoinModal()">
                 Join Room
             </button>
-        </div>
-
-        <div id="joinModal" class="modal-overlay">
-            <div class="modal-box">
-                <span class="close-btn" onclick="closeJoinModal()">&times;</span>
-                <h2>Room PIN</h2>
-                <h2>房号</h2>
-                <input type="text" id="roomCodeInput" placeholder="Ex: LANTERN123">
-                <button class="submit-btn" onclick="submitRoomCode()">Enter Lantern Festival</button>
-            </div>
         </div>
     </div>
 
