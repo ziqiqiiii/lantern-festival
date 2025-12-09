@@ -24,8 +24,6 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   const muteSFXCheckbox = document.getElementById('muteSFX');
   const autoPlayStoriesCheckbox = document.getElementById('autoPlayStories');
   const bgThumbnails = document.querySelectorAll('.bg-thumbnail');
-  
-
 
   // Host page elements
   const pinArea = document.getElementById('pinArea');
@@ -106,7 +104,10 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     // Apply background image
     const bgElement = document.querySelector('.lobby-background');
     if (bgElement) {
-      bgElement.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.45),rgba(0,0,0,0.45)), url('/img/${settings.bgImage}')`;
+      // Check if it's a full URL (AI generated) or a local file
+      const isUrl = settings.bgImage.startsWith('http');
+      const imageUrl = isUrl ? settings.bgImage : `/img/${settings.bgImage}`;
+      bgElement.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.45),rgba(0,0,0,0.45)), url('${imageUrl}')`;
     }
 
     // Apply lantern config
@@ -132,8 +133,6 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     applyLanternConfig();
     socket.emit('settings-updated', settings);
   });
-  
-
   maxLanternsInput.addEventListener('change', () => updateSliderFill(maxLanternsInput));
 
   respawnCountInput.addEventListener('input', (e) => {
@@ -155,16 +154,6 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   muteSFXCheckbox.addEventListener('change', (e) => {
     settings.muteSFX = e.target.checked;
     saveSettings();
-    
-    // Use this checkbox to control background music instead
-    if (window.LanternAudio) {
-      if (settings.muteSFX) {
-        window.LanternAudio.pauseBackgroundMusic();
-      } else {
-        window.LanternAudio.playBackgroundMusic();
-      }
-    }
-    
     socket.emit('settings-updated', settings);
   });
 
@@ -197,33 +186,26 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   // Placeholder hook for AI background generation. Your colleague can provide
   // `window.requestAIGeneratedBackground()` which should return a Promise
   // resolving to the generated filename (e.g. 'bgAI.jpg') or null on failure.
-  async function generateAIBackground(thumb) {
+  function generateAIBackground(thumb) {
     if (!thumb) return;
+    
+    // Prevent double-clicking while loading
+    if (thumb.classList.contains('loading')) return;
+
     try {
+      // 1. Visual Feedback
       thumb.classList.add('loading');
-      if (typeof window.requestAIGeneratedBackground === 'function') {
-        const result = await window.requestAIGeneratedBackground();
-        thumb.classList.remove('loading');
-        if (result) {
-          settings.bgImage = result;
-          saveSettings();
-          updateSettingsUI();
-        } else {
-          console.warn('AI background generator returned no result');
-        }
-      } else {
-        // Fallback stub: simulate a short generation delay and then select the
-        // placeholder image 'bgAI.jpg'. Colleague can replace this behavior.
-        await new Promise(r => setTimeout(r, 800));
-        thumb.classList.remove('loading');
-        settings.bgImage = thumb.dataset.bg || 'bgAI.jpg';
-        saveSettings();
-        updateSettingsUI();
-        console.log('AI background placeholder selected (stub)');
-      }
+      thumb.style.cursor = 'wait';
+      
+      console.log('Requesting random AI background...');
+      
+      // 2. Emit to Server (No prompt needed, server handles randomization)
+      socket.emit('requestRandomAiBackground');
+
     } catch (err) {
       thumb.classList.remove('loading');
-      console.error('AI background generation failed', err);
+      thumb.style.cursor = 'pointer';
+      console.error('AI background request failed', err);
     }
   }
 
@@ -245,13 +227,6 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
 
   // Load settings on page load
   loadSettings();
-  
-  // Add event listener to play background music on first click
-  document.addEventListener('click', () => {
-    if (window.LanternAudio) {
-      window.LanternAudio.playBackgroundMusic();
-    }
-  }, { once: true });
 
   // Try to reconnect to existing room or create new one
   (async function initRoom() {
@@ -517,4 +492,47 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     alert('Room closed: ' + data.message);
     sessionStorage.removeItem('host_room_pin');
   });
+
+  // --- AI Background Socket Listeners ---
+
+  socket.on('aiBackgroundGenerated', (data) => {
+    const { imageUrl, locationName } = data;
+    console.log(`AI Background Generated: ${locationName}`);
+
+    // Find the AI thumbnail
+    const aiThumb = document.querySelector('.bg-thumbnail.ai') || 
+                    document.querySelector('.bg-thumbnail[data-bg="bgAI.jpg"]');
+
+    if (aiThumb) {
+      // Remove loading state
+      aiThumb.classList.remove('loading');
+      aiThumb.style.cursor = 'pointer';
+
+      // Update the thumbnail's preview image
+      aiThumb.style.backgroundImage = `url('${imageUrl}')`;
+      
+      // IMPORTANT: Update the dataset so updateSettingsUI knows this is the selected image
+      aiThumb.dataset.bg = imageUrl; 
+    }
+
+    // Apply the new background immediately
+    settings.bgImage = imageUrl;
+    saveSettings();
+    updateSettingsUI();
+
+    // Optional: Show a nice toast notification with the location name
+    // alert(`Transported to: ${locationName}`); 
+  });
+
+  socket.on('aiBackgroundError', (error) => {
+    console.error("AI Generation Error:", error);
+    alert("Failed to generate AI background. Please try again.");
+    
+    const aiThumb = document.querySelector('.bg-thumbnail.ai');
+    if (aiThumb) {
+      aiThumb.classList.remove('loading');
+      aiThumb.style.cursor = 'pointer';
+    }
+  });
+  
 })();
