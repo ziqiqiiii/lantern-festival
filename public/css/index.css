@@ -1,0 +1,392 @@
+body, html { margin: 0; padding: 0; overflow-x: hidden; background-color: #050505; }
+#bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: 2; pointer-events: none; }
+body {
+    height: 650vh;
+}
+
+.text-card {
+    max-width: 1000px;
+    width: 90%;
+    margin: 20px auto; /* Center horizontally with auto margins */
+    background-color: rgba(0, 0, 0, 0.6); /* Black with 60% opacity (See-through) */
+    padding: 40px;          /* Breathing room inside the box */
+    border-radius: 15px;    /* Rounded corners */
+    text-align: center;
+}
+
+/* 4. The Layers */
+body {position: relative;}/* Ensure the body is the reference point for the video */
+
+video { /* Ensure video covers the screen */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Ensures video fills screen without stretching */
+    z-index: 1;
+    opacity: 0.2; /* Dims the video slightly so lanterns pop */
+}
+
+/* Hide scrollbar*/
+::-webkit-scrollbar {
+    display: none;
+}
+/* 5. The Content (Text) - Sits on top */
+.content { 
+    position: relative; 
+    z-index: 10; 
+    color: #e3a318; /* Gold Text */
+    text-align: center;  
+    text-shadow: 0 2px 10px rgba(0,0,0,1); 
+}
+
+.hero {
+    height: 100vh; /* Takes up exactly 100% of the visible screen */
+    width: 100%;
+    display: flex;
+    flex-direction: column; /* Stacks title on top of subtitle */
+    justify-content: center; /* Centers vertically */
+    align-items: center;     /* Centers horizontally */
+}
+
+h1 { font-family: 'Georgia', 'Ma Shan Zheng', serif; font-size: 3rem; margin-bottom: 20px; letter-spacing: 2px; }
+p { font-family: 'Georgia', 'Ma Shan Zheng', serif; font-size: 1.5rem; }
+
+.feature-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 90vh; /* Each section takes up most of the screen */
+    overflow: hidden; /* Prevents horizontal scrollbar if image is huge */
+    margin-bottom: 100px;
+}
+.text-showcase {
+    flex: 1;
+    padding:0 3%;
+}
+
+/* The Containers */
+.lantern-showcase{
+    flex: 1; /* Both take up equal width */
+    padding: 0px;
+    justify-content: flex-start; /* or 'flex-start' / 'flex-end' to align to side */
+}
+
+/* The Images */
+.feature-img {
+    width: 200%;
+    max-width: 100%; /* Don't let them get HUGE */
+    height: auto;
+    object-fit: cover; /* Ensures it looks good at any size */
+    filter: drop-shadow(0 0 20px rgba(255, 165, 0, 0.6)); /* Glow effect! */
+}
+
+/* Text Styling */
+.text-showcase h2 {
+    font-family: 'Georgia', 'Ma Shan Zheng', serif;
+    font-size: 2.5rem;
+    color: #e3a318; /* Gold color for titles */
+    margin-bottom: 5px;
+}
+
+.text-showcase p {
+    font-size: 1.2rem;
+    line-height: 1.6;
+    color: #ffffff;
+    background: rgba(0,0,0,0.5); /* Semi-transparent background for readability */
+    padding: 15px;
+    border-radius: 10px;
+}
+
+/* --- ANIMATIONS (The Drifting) --- */
+/* We create a "bobbing" animation using Keyframes */
+@keyframes float {
+    0% { transform: translateY(0px) rotate(2deg); }
+    50% { transform: translateY(-20px) rotate(-2deg); } /* Float Up and tilt left */
+    100% { transform: translateY(0px) rotate(2deg); }
+}
+
+/* Apply different speeds so they don't look synchronized */
+.drift-slow {
+    animation: float 6s ease-in-out infinite;
+}
+
+.drift-medium {
+    animation: float 5s ease-in-out infinite;
+}
+
+.drift-fast {
+    animation: float 4s ease-in-out infinite;
+}
+/* --- BUTTON CONTAINER --- */
+.button-container {
+    position: absolute;
+    top: 30px;          /* Distance from top */
+    right: 40px;        /* Distance from right */
+    display: flex;
+    gap: 20px; /* Space between buttons */
+    justify-content: center;
+    z-index: 15;        /* Ensures it sits ON TOP of the Hero text */
+}
+.button-container-2{
+    display: flex;
+    gap: 20px; /* Space between buttons */
+    justify-content: center;
+    z-index: 15;        /* Ensures it sits ON TOP of the Hero text */
+}
+
+/* --- MAIN BUTTON STYLES --- */
+.action-btn {
+    padding: 15px 30px;
+    font-size: 1.2rem;
+    font-family: 'Georgia', serif;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.create-btn {
+    background-color: #e3a318; /* Gold */
+    color: #000;
+}
+
+.join-btn {
+    background-color: transparent;
+    border: 2px solid #e3a318;
+    color: #e3a318;
+}
+
+.action-btn:hover {
+    transform: scale(1.05); /* Grow slightly */
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); /* Glow */
+}
+
+/* --- MODAL (POPUP) STYLES --- */
+.modal-overlay {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8); /* Dark background dimming */
+    z-index: 100; /* Sit on top of EVERYTHING */
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-box {
+    position: relative;
+    background: rgba(20, 20, 20, 0.95);
+    border: 1px solid #c89216;
+    padding: 30px 20px;
+    border-radius: 15px;
+    text-align: center;
+    width: 80%;
+    max-width: 350px;
+    box-shadow: 0 0px 50px rgba(255, 215, 0, 0.5);
+    animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+    opacity: 0;
+    transform: translateY(30px);
+    }
+    to {
+    opacity: 1;
+    transform: translateY(0);
+    }
+}
+
+.lantern-icon {
+    font-size: 60px;
+    margin-bottom: 5px;
+}
+
+.modal-box h2 {
+    padding-left: 7%;
+    color: #ffffff;
+    font-family: 'Georgia', 'ma shan zheng', serif;
+    font-size: 1rem;
+    text-align: left;
+    margin-top: 30px;
+    margin-bottom: 8px;
+}
+.modal-box h1 {
+    color: #ffffff;
+    font-family: 'Georgia', 'ma shan zheng', serif;
+    font-size: 2rem;
+    margin: 0px 10px;
+}
+.modal-box p {
+    color: #ffffff;
+    font-family: 'Georgia', 'ma shan zheng', serif;
+    font-size: 1rem;
+    margin-bottom: 30px;
+}
+
+.modal-box input {
+    width: 80%;
+    padding: 10px;
+    font-size: 1rem;
+    font-family: inherit;
+    text-align: center;
+    border-radius: 5px;
+    border: 2px solid #555;
+    background-color: #000000; /* White input background */
+    color: #ffffff;            /* Black text */
+}
+
+.submit-btn {
+    background: linear-gradient(135deg, #845c1d 0%, #ffe564 100%);
+    border: none;
+    padding: 10px 20px;
+    margin-top: 30px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(157, 120, 27, 0.3);
+}
+.submit-btn:active { /*After they key room no.*/
+    transform: translateY(0);
+}
+
+.submit-btn:disabled { /*Before they key room no.*/
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* The 'X' Close Button */
+.close-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    color: #fff;
+    font-size: 30px;
+    cursor: pointer;
+    line-height: 1;     /* Prevents extra vertical space */
+    transition: color 0.3s;
+}
+.close-btn:hover {
+    color: #e3a318; /* Turns Gold when you hover */
+}
+
+.error-message {
+background: #fee;
+color: #c33;
+padding: 12px 16px;
+border-radius: 8px;
+margin-bottom: 10px;
+font-size: 14px;
+display: none;
+text-align: center;
+}
+
+.error-message.show {
+display: block;
+animation: shake 0.5s;
+}
+
+@keyframes shake {
+0%, 100% { transform: translateX(0); }
+25% { transform: translateX(-10px); }
+75% { transform: translateX(10px); }
+}
+
+.divider {
+    text-align: center;
+    margin: 25px 0;
+    position: relative;
+}
+
+.divider::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    background: #e0e0e0;
+}
+
+.divider span {
+    background: rgba(20, 20, 20, 0.95);
+    padding: 0 15px;
+    color: #999;
+    font-size: 13px;
+    position: relative;
+    z-index: 20;
+}
+
+.scan-hint {
+    text-align: center;
+    color: #999;
+    font-size: 13px;
+    margin-top: 20px;
+}
+
+/* --- MOBILE SPECIFIC TWEAKS --- */
+@media (max-width: 768px) {
+    
+    /* 1. Move buttons to be safer on small screens */
+    .button-container {
+        top: 20px;
+        right: 20px; /* Bring it closer to the edge so it's not cut off */
+        gap: 10px;   /* Move buttons closer together */
+    }
+
+    /* 2. Make buttons smaller so they fit */
+    .action-btn {
+        padding: 10px 15px; /* Smaller touch targets */
+        font-size: 1rem;    /* Smaller text */
+    }
+    
+    /* 3. Ensure Modal is definitely on top */
+    .modal-overlay {
+        z-index: 99999 !important; /* Force it above everything */
+    }
+    /* 1. Shrink the Main Hero Titles */
+    .hero h1 {
+        font-size: 2.5rem; /* Down from 3.5rem */
+        letter-spacing: 2px; /* Reduce spacing so it fits */
+        line-height: 1.2;
+    }
+
+    /* 2. Shrink the Feature Titles (Lantern Descriptions) */
+    .text-showcase h2, .text-card h2 {
+        font-size: 1.8rem; /* Down from 2.5rem */
+    }
+
+    /* 3. Shrink the Body Paragraphs */
+    .text-showcase p, .text-card p, .content p {
+        font-size: 1rem;   /* Down from 1.4rem or 1.5rem */
+        line-height: 1.5;
+    }
+
+    /* 4. Adjust the Text Card padding */
+    .text-card {
+        padding: 20px;     /* Less padding = more room for text */
+        width: 90%;        /* Make it wider on phone */
+    }
+    
+    /* 5. Stack the Feature Sections Vertically */
+    /* This ensures image sits ON TOP of text on mobile, instead of side-by-side */
+    .feature-section, .feature-section.reverse {
+        flex-direction: column; /* Stack them! */
+        height: auto;
+        padding-bottom: 50px;
+    }
+    
+    /* Add spacing between the stacked image and text */
+    .lantern-showcase {
+        margin-bottom: 20px;
+    }
+}
