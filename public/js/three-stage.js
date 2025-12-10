@@ -322,8 +322,13 @@
 
     Promise.all(texturePromises).then(textures => {
       const mesh = createLanternMesh(textures, data.bgColor, data.shape);
-      // attach author/story to mesh userData for interaction
-      mesh.userData.customMessage = data.customMessage || null;
+
+      // Attach bilingual story (preferred) and fallback single message
+      // so clicking the lantern can instantly show either language.
+      mesh.userData.customMessageBilingual = data.customMessageBilingual || (data.customMessage ? { en: data.customMessage, zh: null } : null);
+      // keep legacy single-field for older code paths
+      mesh.userData.customMessage = mesh.userData.customMessageBilingual ? mesh.userData.customMessageBilingual.en : (data.customMessage || null);
+
       mesh.userData.author = data.name || null;
       initializeLanternTransform(mesh);
       addNameLabelIfPresent(mesh, data.name);
@@ -402,10 +407,17 @@
 
   function onPointerClick(e) {
     if (!hoveredMesh) return;
-    const story = hoveredMesh.userData.customMessage;
     const author = hoveredMesh.userData.author;
-    if (story) {
-      showStoryOverlay(story, author);
+    // Prefer bilingual payload if present
+    const bilingual = hoveredMesh.userData.customMessageBilingual || null;
+    const single = hoveredMesh.userData.customMessage || (bilingual ? bilingual.en : null);
+
+    // If host exposes a global overlay handler, delegate to it so host handles
+    // bilingual toggling and UI consistency. Otherwise fall back to local overlay.
+    if (typeof window.showLanternStory === 'function') {
+      window.showLanternStory(bilingual || single, author);
+    } else if (single) {
+      showStoryOverlay(single, author);
     }
   }
 

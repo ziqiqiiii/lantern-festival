@@ -185,13 +185,14 @@ async function analyzeWithQWEN({ faces, shape, name }) {
     for (const f of faces) {
       content.push({ type: 'image_url', image_url: { url: f } });
     }
+
+    // Prompt the model to return a JSON object with English and Chinese fields.
     content.push({
       type: 'text',
-      text: `You are a masterful Chinese cultural storyteller. Analyze the set of images provided, which represent the different illustrated faces of a single lantern. Examine them holistically to discern any meaning, whether from recognizable drawings, Chinese characters, words, colors, or abstract patterns. Look for connections across the faces that might form a phrase, theme, or narrative concept.
-
-Your task is to generate a short, poetic story (80-120 words) inspired by this visual analysis. If the images suggest a clear theme—such as reunion, hope, prosperity, or longevity—weave that theme into a tale rooted in Lantern Festival traditions and Chinese cultural values. If the drawings are abstract or ambiguous, interpret the mood, colors, and shapes to create an uplifting story about wishes, family, or renewal appropriate for the festival.
-
-Write in a warm, traditional storytelling style, incorporating classic symbolism like lantern light, the moon, family gatherings, and seasonal cycles. Ensure the narrative feels authentic and carries a subtle moral or philosophical insight, transforming the user's drawings into a meaningful cultural anecdote. Reply in clear English as plain text only.`
+      text: `You are a masterful Lantern Festival storyteller. Analyze the provided images as a set and produce a short poetic story inspired by them.
+Return ONLY a JSON object with exactly two keys: "en" (English story) and "zh" (Chinese story).
+Example: {"en":"English text...","zh":"中文文本..."}
+Make each version ~80-120 words, warm traditional tone, and do not include any extra commentary or markup.`
     });
 
     const payload = {
@@ -200,7 +201,7 @@ Write in a warm, traditional storytelling style, incorporating classic symbolism
         { role: 'user', content }
       ],
       temperature: 0.7,
-      max_tokens: 400
+      max_tokens: 700
     };
 
     const res = await fetch(`${QWEN_BASE_URL}/chat/completions`, {
@@ -220,27 +221,37 @@ Write in a warm, traditional storytelling style, incorporating classic symbolism
 
     const json = await res.json();
 
-    // Extract text from common qwen response shapes
-    let story = null;
+    // Extract raw text from common response shapes
+    let raw = null;
     if (Array.isArray(json.choices) && json.choices.length) {
       const choice = json.choices[0];
       const msg = choice.message || choice;
       const content = msg.content || msg;
       if (Array.isArray(content)) {
-        // find first text segment
         const seg = content.find(c => c.type === 'text' || c.type === 'output_text' || typeof c.text === 'string');
-        if (seg) story = seg.text || seg.content || seg.output_text || null;
+        if (seg) raw = seg.text || seg.content || seg.output_text || null;
       } else if (typeof content === 'string') {
-        story = content;
+        raw = content;
       } else if (choice.text) {
-        story = choice.text;
+        raw = choice.text;
       }
     }
+    if (!raw && json.output) raw = typeof json.output === 'string' ? json.output : (json.output?.text || null);
+    if (!raw && json.story) raw = json.story;
 
-    if (!story && json.output) story = typeof json.output === 'string' ? json.output : (json.output?.text || null);
-    if (!story && json.story) story = json.story;
+    if (!raw) return null;
 
-    return story ? story.trim() : null;
+    // Try to parse JSON the model returned
+    try {
+      const parsed = JSON.parse(raw.trim());
+      return {
+        en: parsed.en || parsed.english || null,
+        zh: parsed.zh || parsed.cn || parsed.chinese || null
+      };
+    } catch (e) {
+      // If cannot parse, return English as raw text and leave Chinese null
+      return { en: raw.trim(), zh: null };
+    }
   } catch (err) {
     console.error('QWEN call failed:', err);
     return null;
@@ -336,6 +347,8 @@ io.on('connection', (socket) => {
       faces: faces,
       bgColor: data.bgColor || null,
       customMessage: customMessage || '',
+      // Forward bilingual pair if present (mobile may include it)
+      customMessageBilingual: data.customMessageBilingual || null,
       autoNarrate: autoNarrate !== false // Default to true if not specified
     };
 

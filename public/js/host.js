@@ -35,6 +35,20 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   const stageEl = document.getElementById('stage');
 
   let pin = null;
+  // Track the currently shown story overlay (created by showLanternStory)
+  let storyOverlay = null;
+
+  // Prevent duplicate spawn handling for the same submission id
+  const _recentLanternSpawns = new Set();
+  function _markLanternSpawned(id) {
+    if (!id) return;
+    _recentLanternSpawns.add(id);
+    // remove after short window to avoid permanently blocking legitimate resends
+    setTimeout(() => _recentLanternSpawns.delete(id), 5000);
+  }
+  function _wasLanternSpawned(id) {
+    return id && _recentLanternSpawns.has(id);
+  }
 
   // Sidebar toggle functionality
   function openSidebar() {
@@ -430,6 +444,25 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     updateUsersList();
   });
 
+  // translation state for host UI
+  let hostStoryLang = 'en'; // 'en' or 'zh'
+  const translateToggle = document.getElementById('translateToggle');
+  if (translateToggle) {
+    translateToggle.addEventListener('click', () => {
+      hostStoryLang = hostStoryLang === 'en' ? 'zh' : 'en';
+      translateToggle.textContent = hostStoryLang === 'en' ? 'EN / 中' : '中 / EN';
+      // If an overlay is visible, switch it immediately
+      if (storyOverlay && storyOverlay.dataset) {
+        const contentEl = storyOverlay.querySelector('.lantern-story-content');
+        if (contentEl) {
+          const en = storyOverlay.dataset.en || '';
+          const zh = storyOverlay.dataset.zh || '';
+          contentEl.textContent = (hostStoryLang === 'zh' && zh) ? zh : en;
+        }
+      }
+    });
+  }
+
   // Handle new lantern submission
   socket.on('new-lantern', (data) => {
     console.log('New lantern received:', {
@@ -441,20 +474,40 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
       console.error('No lantern image data received:', data);
       return;
     }
+
+    // Guard against duplicate spawns for the same submission (some clients may
+    // re-send or the same event might be emitted twice). If already handled,
+    // skip.
+    if (_wasLanternSpawned(data.id || data.socketId || data._cid)) {
+      console.warn('Duplicate lantern event ignored for id:', data.id || data.socketId || data._cid);
+      return;
+    }
+    _markLanternSpawned(data.id || data.socketId || data._cid);
+
     // spawn on THREE.js stage if available
     if (window.spawnLanternOnStage) {
+      // ensure bilingual payload is present so stage can store it on the mesh
+      if (!data.customMessageBilingual && data.customMessage) {
+        data.customMessageBilingual = { en: data.customMessage, zh: null };
+      }
       window.spawnLanternOnStage(data);
     }
 
-    // If the MCP produced a story, show it briefly on the host screen
-    if (data.customMessage && data.autoNarrate) {
-      showLanternStory(data.customMessage, data.name);
-    }
+    // Attach bilingual story to mesh/userData so host can toggle quickly
+    // const storyPayload = data.customMessageBilingual || (data.customMessage ? { en: data.customMessage, zh: null } : null);
+    //
+    // // If the MCP produced a story and autoplay is enabled, show it
+    // if (storyPayload && settings.autoPlayStories) {
+    //   showLanternStory(storyPayload, data.name);
+    // }
   });
 
-  // Simple ephemeral story overlay
-  function showLanternStory(text, author) {
+  // Replace existing showLanternStory with bilingual-aware version
+  function showLanternStory(textOrPair, author) {
     try {
+      // remove existing
+      if (storyOverlay && storyOverlay.parentNode) storyOverlay.remove();
+
       const overlay = document.createElement('div');
       overlay.style.position = 'fixed';
       overlay.style.left = '50%';
@@ -469,17 +522,55 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
       overlay.style.boxShadow = '0 6px 18px rgba(0,0,0,0.4)';
       overlay.style.fontSize = '14px';
       overlay.style.lineHeight = '1.4';
-      overlay.innerHTML = `<strong>${author || 'Someone'}'s story: </strong><div style="margin-top:8px;">${text}</div>`;
+
+      // header
+      const header = document.createElement('div');
+      header.style.fontWeight = '700';
+      header.textContent = `${author || 'Someone'}'s story:`;
+
+      const content = document.createElement('div');
+      content.className = 'lantern-story-content';
+      content.style.marginTop = '8px';
+
+      // Accept either a plain string or an object {en, zh}
+      if (typeof textOrPair === 'string') {
+        overlay.dataset.en = textOrPair;
+        overlay.dataset.zh = '';
+        content.textContent = textOrPair;
+      } else if (textOrPair && typeof textOrPair === 'object') {
+        overlay.dataset.en = textOrPair.en || (textOrPair.zh || '');
+        overlay.dataset.zh = textOrPair.zh || '';
+        // default show according to host preference (if available)
+        content.textContent = (hostStoryLang === 'zh' && overlay.dataset.zh) ? overlay.dataset.zh : overlay.dataset.en;
+      } else {
+        overlay.dataset.en = '';
+        overlay.dataset.zh = '';
+        content.textContent = '';
+      }
+
+      overlay.appendChild(header);
+      overlay.appendChild(content);
       document.body.appendChild(overlay);
+      storyOverlay = overlay;
+
+      // auto-hide after 7s with fade
       setTimeout(() => {
-        overlay.style.transition = 'opacity 0.6s';
-        overlay.style.opacity = '0';
-        setTimeout(() => overlay.remove(), 600);
-      }, 7000); // show for 7s
+        try {
+          overlay.style.transition = 'opacity 0.6s';
+          overlay.style.opacity = '0';
+          setTimeout(() => overlay.remove(), 600);
+        } catch (e) {
+          overlay.remove();
+        }
+      }, 7000);
     } catch (e) {
       console.warn('Failed to show lantern story overlay', e);
     }
   }
+
+  // Expose host overlay API immediately so three-stage delegates to host UI
+  // (three-stage's onPointerClick will call window.showLanternStory(...))
+  window.showLanternStory = showLanternStory;
 
   // Initialize THREE.js stage when available
   function initStage() {
