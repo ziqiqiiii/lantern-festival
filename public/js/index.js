@@ -194,6 +194,22 @@ const codeInput = document.getElementById('roomCodeInput');
 const submitBtn = document.getElementById('submitBtn');
 const errorMsg = document.getElementById('errorMessage');
 
+// Auto-open modal on redirect with flag or stored error
+window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const shouldOpen = params.get('openJoin') === '1';
+    const storedError = sessionStorage.getItem('join_error');
+
+    if (shouldOpen || storedError) {
+        if (storedError) {
+            showError(storedError);
+            // Clear after showing once
+            sessionStorage.removeItem('join_error');
+        }
+        openJoinModal();
+    }
+});
+
 /* --- 1. MODAL CONTROLS --- */
 function openJoinModal() {
     joinModal.style.display = 'flex';
@@ -239,12 +255,15 @@ function submitInfo() {
 
     // C. THE CHECK (Assume server check)
     fetch(`/check-room/${codeValue}`)
-        .then(res => {
+        .then(async res => {
+            const data = await res.json().catch(() => null);
             if (!res.ok) {
-                // If server says "404 Not Found" or error
+                // Use server-provided message if available
+                const msg = (data && data.message) ? data.message : 'Room not active.';
+                sessionStorage.setItem('join_error', msg);
                 throw new Error('room-not-active');
             }
-            return res.json();
+            return data;
         })
         .then(roomInfo => {
             // --- SUCCESS! ROOM EXISTS ---                    
@@ -291,7 +310,8 @@ function showError(message) {
 }
 
 function showRoomNotActiveMessage() {
-    showError("Please enter a correct Room Code.");
+    const storedError = sessionStorage.getItem('join_error');
+    showError(storedError || 'Please enter a correct Room Code.');
     return;
 }
 

@@ -359,7 +359,8 @@
 
     // Store error message and redirect to join page
     sessionStorage.setItem('join_error', data.message || 'Failed to join room.');
-    window.location.href = '/join';
+    // Redirect back to landing and auto-open the join modal
+    window.location.href = '/join?openJoin=1';
   });
 
   // Handle successful join
@@ -374,7 +375,7 @@
       sessionStorage.setItem('join_error', data && data.reason ? data.reason : 'You were removed from the room by the host.');
     } catch (e) { /* ignore storage errors */ }
     // Redirect to join landing so user can re-enter or create a new session
-    window.location.href = '/join';
+    window.location.href = '/join?openJoin=1';
   });
 
   // folding preview using CSS 3D transforms
