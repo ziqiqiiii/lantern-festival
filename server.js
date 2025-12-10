@@ -119,17 +119,20 @@ app.get('/', (req, res) => {
 app.get('/check-room/:pin', (req, res) => {
   const { pin } = req.params;
   const exists = rooms.has(pin);
-  
+  let message = ""
+  let status = 200
+
   if (!exists) {
-    return res.status(404).json({ exists: false, pin });
+    status = 404
+    message = 'Room not found. Please check the PIN and try again.'
   }
   
-  res.json({ exists, pin });
+  return res.status(status).json({ exists, pin, message });
 });
 
 // Serve join landing page
 app.get('/join', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'join.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index3d.html'));
 });
 
 // Serve join page at /join/:pin (mobile)
