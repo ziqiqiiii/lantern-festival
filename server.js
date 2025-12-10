@@ -119,6 +119,11 @@ app.get('/', (req, res) => {
 app.get('/check-room/:pin', (req, res) => {
   const { pin } = req.params;
   const exists = rooms.has(pin);
+  
+  if (!exists) {
+    return res.status(404).json({ exists: false, pin });
+  }
+  
   res.json({ exists, pin });
 });
 

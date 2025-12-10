@@ -805,21 +805,8 @@
         }
 
         function showRoomNotActiveMessage() {
-            let el = document.getElementById('roomNotActiveMsg');
-            if (!el) {
-                el = document.createElement('div');
-                el.id = 'roomNotActiveMsg';
-                el.style.cssText = 'position:fixed;left:50%; top:50%;transform: translate(-50%, -50%); padding:12px;border-radius:8px;background:#111;color:#ffd700;z-index:9999;text-align:center;';
-                el.innerHTML = 'That room is not active. Check the PIN or ask the host to reopen the room. <button id="retryCheck">Retry</button>';
-                document.body.appendChild(el);
-                document.getElementById('retryCheck').addEventListener('click', () => {
-                    el.remove();
-                    // re-run whatever function initiated the check
-                    submitRoomCode();
-                });
-            } else {
-                el.style.display = 'block';
-            }
+            showError("Please enter a correct Room Code.");
+            return;
         }
 
         // Reset button if they hit the "Back" button to return here
