@@ -132,7 +132,7 @@ app.get('/check-room/:pin', (req, res) => {
 
 // Serve join landing page
 app.get('/join', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index3d.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Serve join page at /join/:pin (mobile)

@@ -1,4 +1,4 @@
-/* Base layout to mirror index3d */
+/* Base layout to mirror index */
 html, body { margin: 0; padding: 0; overflow-x: hidden; background-color: #050505; }
 /* Ensure body matches the visible viewport on mobile to prevent absolute children clipping */
 body { position: relative; min-height: 100svh; }
@@ -8,7 +8,7 @@ body { position: relative; min-height: 100svh; }
     display: none;
 }
 
-/* Absolute-positioned background video, zoomed like index3d */
+/* Absolute-positioned background video, zoomed like index */
 #bgVideo, body > video {
     position: fixed;
     inset: 0;
