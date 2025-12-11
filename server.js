@@ -112,7 +112,7 @@ app.get('/create-room', async (req, res) => {
 
 // Redirect root to host page
 app.get('/', (req, res) => {
-  res.redirect('/host.html');
+  res.redirect('/index.html');
 });
 
 // Check if room exists (for host reconnection)
