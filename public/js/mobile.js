@@ -1,5 +1,37 @@
 (function () {
   const socket = io();
+  // CSS-variable-based parallax: keep scale at 1.5 in CSS and only update translateY
+  (function initVideoParallax() {
+    const bgVideo = document.getElementById('bgVideo') || document.querySelector('video');
+    if (!bgVideo) return;
+    let rafPending = false;
+
+    function applyTransformVars() {
+      const y = window.scrollY || window.pageYOffset || 0;
+      const translateY = y * -0.5; // parallax speed
+      bgVideo.style.setProperty('--video-ty', `${translateY}px`);
+      // Optional: if you ever want to animate scale via CSS var, uncomment:
+      // const doc = document.documentElement;
+      // const maxScroll = Math.max(1, doc.scrollHeight - window.innerHeight);
+      // const progress = Math.min(1, Math.max(0, y / maxScroll));
+      // const scale = 1.5 + progress * 0.0; // keep scale constant currently
+      // bgVideo.style.setProperty('--video-scale', String(scale));
+    }
+
+    function onScroll() {
+      if (rafPending) return;
+      rafPending = true;
+      requestAnimationFrame(() => {
+        applyTransformVars();
+        rafPending = false;
+      });
+    }
+
+    // Initialize and bind
+    applyTransformVars();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', applyTransformVars);
+  })();
   
   // Add event listener to play background music on first click
   document.addEventListener('click', () => {
@@ -327,7 +359,8 @@
 
     // Store error message and redirect to join page
     sessionStorage.setItem('join_error', data.message || 'Failed to join room.');
-    window.location.href = '/join';
+    // Redirect back to landing and auto-open the join modal
+    window.location.href = '/join?openJoin=1';
   });
 
   // Handle successful join
@@ -342,7 +375,7 @@
       sessionStorage.setItem('join_error', data && data.reason ? data.reason : 'You were removed from the room by the host.');
     } catch (e) { /* ignore storage errors */ }
     // Redirect to join landing so user can re-enter or create a new session
-    window.location.href = '/join';
+    window.location.href = '/join?openJoin=1';
   });
 
   // folding preview using CSS 3D transforms

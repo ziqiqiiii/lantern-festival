@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top-Middle Funnel Lanterns</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/index.css">
+
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+    </script>
+</head>
+<body>
+    <video src="./video/background_video.mp4" autoplay loop muted playsinline></video>
+    <canvas id="bg-canvas"></canvas>
+
+    <div class="content">
+        <section class="hero">
+            <h1>History of Chinese Sky Lanterns</h1>
+            <h1>天灯历史源流</h1>
+        </section>
+        <div class="button-container">
+            <button class="action-btn create-btn" id="createBtn" onclick="window.location.href='host.html'">
+                Create Room
+            </button>
+            
+            <button class="action-btn join-btn" id="JoinBtn" onclick="openJoinModal()">
+                Join Room
+            </button>
+        </div>
+
+        <div id="joinModal" class="modal-overlay">
+            <div class="modal-box">
+                <span class="close-btn" onclick="closeJoinModal()">&times;</span>
+                
+                <div class="lantern-icon">🏮</div>
+                <h1>Join Lantern Festival</h1>
+                <p>Enter your details to create beautiful lanterns</p>
+
+                <div id="errorMessage" class="error-message"></div>
+
+                <h2>Your Name 名字</h2>
+                <input type="text" id="nameInput" placeholder="Enter your name" required maxlength="20" autocomplete="name">
+                
+                <h2>Room PIN 房间PIN码</h2>
+                <input type="text" id="roomCodeInput" placeholder="0000" required pattern="[0-9]{4}" maxlength="4" inputmode="numeric">
+                <button class="submit-btn" id="submitBtn" onclick="submitInfo()">Enter Lantern Festival</button>
+
+                <div class="divider">
+                <span>OR</span>
+                </div>
+
+                <div class="scan-hint">
+                Scan QR code from host screen to join automatically
+                </div>
+            </div>
+        </div>
+                
+        <div class="feature-section">
+            <div class="lantern-showcase left">
+                <img src="./img/zhugeliang_lantern.png" class="feature-img drift-slow" alt="Health Lantern">
+            </div>
+            <div class="text-showcase right">
+                <h2>The Strategist's Signal (Wartime Origins)</h2>
+                <h2>《军师的烽火：战时起源》</h2>
+                <p>The story begins not with celebration, but with survival. In the turbulence of the Three Kingdoms period (circa 220–280 AD), the brilliant military strategist Zhuge Liang (courtesy name Kongming) found his army trapped by enemy forces. With no way to send a messenger on the ground, he looked to the sky. He crafted the first "floating balloon" using oiled rice paper and a bamboo frame, releasing it as a distress signal to summon reinforcements. These "Kongming Lanterns" were the world’s first hot-air balloons, born from the necessity of war.</p>
+                <p>这故事的起点并非庆典，而是求生。在烽火连天的三国时期（约公元220-280年），杰出的军事家诸葛亮（字孔明）率军陷入敌军围困。陆路传信无望之际，他举首望天。用浸油宣纸与竹骨制成首个"浮空灯"，放飞求援信号召集援军。这些"孔明灯"便成为世界上最早的热气球，诞生于战时的迫切需求之中。</p>
+            </div>
+        </div>
+
+        <div class="feature-section">
+            <div class="text-showcase left">
+                <h2>From Safety to Fertility</h2>
+                <h2>从平安到祈愿</h2>
+                <p>In Taiwan (Pingxi): During the Qing Dynasty, remote villages lived in fear of bandits. When winter raids forced villagers to flee into the mountains, watchmen stayed behind. A rising sky lantern was the "all-clear" signal—a beacon in the night telling families it was safe to return home.</p>
+                <p>在台湾（平溪）：清朝时期，偏远村落常受盗匪侵扰。冬日匪患迫使村民避入深山时，守望者会留守村中。一盏升空的天灯便是“平安信号”——犹如暗夜灯塔，告知家人可安然返家。</p>
+            </div>
+            <div class="lantern-showcase right">
+                <img src="./img/taiwan_lantern.png" class="feature-img drift-medium" alt="taiwan_lantern">
+            </div>
+        </div>
+        <div class="feature-section">
+            <div class="lantern-showcase left">
+                <img src="./img/hainan_lantern.png" class="feature-img drift-slow" alt="hainan_lantern">
+            </div>
+            <div class="text-showcase right">
+                <p>In Hainan: The tradition took a linguistic turn. In the local dialect, "Tian Deng" (Sky Lantern) sounds almost identical to "Tian Ding" (Adding a Son). Lighting a lantern became a ritual not just for safety, but for the growth of the family, a prayer for children and prosperity.</p>
+                <p>在海南：这项传统发生了语言上的转义。当地方言中，“天灯”与“添丁”发音相近。燃放天灯不仅是为祈求平安，更成为家族人丁兴旺的仪式，寄托着子嗣绵延、家业昌盛的愿景。</p>
+            </div>
+        </div>
+
+        <div class="feature-section">
+            <div class="lantern-showcase left">
+                <img src="./img/exploded_lantern.png" class="feature-img drift-fast" alt="exploded_lantern">
+            </div>
+            <div class="text-showcase right">
+                <h2>Crafting the Light</h2>
+                <h2>巧手制天灯</h2>
+                <p>The magic of the sky lantern lies in its simplicity. Traditionally, it requires only natural elements: a sturdy frame of bamboo, a shell of rice paper, and a fuel cell of waxy paper or cloth. The paper is treated with oil to make it water-resistant and durable. It is a delicate balance of engineering—light enough to float, yet strong enough to hold the fire that powers its ascent.</p>
+                <p>天灯的妙处在于其质朴的工艺。传统制作仅需天然材料：竹条扎成牢固骨架，宣纸糊作灯罩，蜡纸或布块作为燃料基座。纸张经浸油处理以防水耐用。这需要精巧的平衡——既要轻盈足以飘升，又需坚韧能承载托起它飞向苍穹的火焰。</p>
+            </div>
+        </div>
+        <div class="text-card">
+            <div class="text-showcase">
+                <h2>The Sea of Wishes</h2>
+                <h2>愿汇星河</h2>
+                <p>Today, the lantern has shed its military skin completely. It is now a canvas for the human heart. In massive festivals like the Pingxi Sky Lantern Festival, thousands gather to write their deepest hopes—health, love, fortune—onto the paper sides. When released together, they form a slow-moving river of stars, a collective act of letting go of the past and sending dreams to the heavens.</p>
+                <p>如今，天灯早已褪去军事外衣，化作承载心愿的画布。在平溪天灯节等盛大庆典中，成千上万的人们齐聚，将健康、姻缘、富贵等最深切的期盼书写于灯面。当万千天灯同时升起，便汇成一条缓缓流淌的星河，成为人们告别往昔、寄梦苍穹的集体仪式。</p>
+            </div>
+        </div>
+        <div class="button-container-2">
+            <button class="action-btn create-btn" onclick="window.location.href='host.html'">
+                Create Room
+            </button>
+            
+            <button class="action-btn join-btn" onclick="openJoinModal()">
+                Join Room
+            </button>
+        </div>
+    </div>
+
+    <script type="module" src="./js/index.js"></script>
+</body>
+</html>

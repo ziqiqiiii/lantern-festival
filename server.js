@@ -112,19 +112,27 @@ app.get('/create-room', async (req, res) => {
 
 // Redirect root to host page
 app.get('/', (req, res) => {
-  res.redirect('/host.html');
+  res.redirect('/index.html');
 });
 
 // Check if room exists (for host reconnection)
 app.get('/check-room/:pin', (req, res) => {
   const { pin } = req.params;
   const exists = rooms.has(pin);
-  res.json({ exists, pin });
+  let message = ""
+  let status = 200
+
+  if (!exists) {
+    status = 404
+    message = 'Room not found. Please check the PIN and try again.'
+  }
+  
+  return res.status(status).json({ exists, pin, message });
 });
 
 // Serve join landing page
 app.get('/join', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'join.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Serve join page at /join/:pin (mobile)

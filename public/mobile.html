@@ -1,23 +1,27 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Lantern Festival — Mobile</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/js/audio.js"></script>
+    <link rel="stylesheet" href="/css/mobile.css">
   </head>
-  <body class="mobile">
+  <body>
+    <video id="bgVideo" src="./video/background_video.mp4" autoplay loop muted playsinline></video>
+
     <div class="container">
       <div class="mobile-header">
         <h1>🏮 Create Your Lantern</h1>
         <div id="status" class="status-text"></div>
         <!-- Audio Controls -->
-        <div class="audio-controls">
+        <div class="audio-controls" style="margin-top: 10px;">
           <button id="toggleMusicMobile" class="audio-btn" title="Toggle Music">🎵</button>
         </div>
-
       </div>
 
       <div class="shape-selector">
@@ -28,30 +32,30 @@
         </select>
       </div>
 
-      <div id="cubeFaces" style="margin-top:12px;">
+      <div id="cubeFaces" style="margin-top:5px;">
         <div class="gallery-container">
-          <div class="face-label" id="faceLabel">Face 1</div>
+          <div class="face-label" id="faceLabel" style="color: #e3a318; margin-bottom: 5px; font-family: 'ZCOOL XiaoWei', serif;">Face 1</div>
           <canvas class="face-canvas active" data-face="0" width="300" height="300"></canvas>
           <canvas class="face-canvas" data-face="1" width="300" height="300" style="display:none;"></canvas>
           <canvas class="face-canvas" data-face="2" width="300" height="300" style="display:none;"></canvas>
           <canvas class="face-canvas" data-face="3" width="300" height="300" style="display:none;"></canvas>
-        </div>
-
-        <div class="gallery-controls">
-          <button id="prevFace" class="nav-btn">&lt;</button>
-          <div class="dots">
-            <span class="dot active" data-index="0"></span>
-            <span class="dot" data-index="1"></span>
-            <span class="dot" data-index="2"></span>
-            <span class="dot" data-index="3"></span>
+          
+          <div class="gallery-controls" style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+            <button id="prevFace" class="nav-btn">&lt;</button>
+            <div class="dots">
+                <span class="dot active" data-index="0"></span>
+                <span class="dot" data-index="1"></span>
+                <span class="dot" data-index="2"></span>
+                <span class="dot" data-index="3"></span>
+            </div>
+            <button id="nextFace" class="nav-btn">&gt;</button>
           </div>
-          <button id="nextFace" class="nav-btn">&gt;</button>
         </div>
       </div>
 
       <div id="cylinderFace" style="display:none;margin-top:12px;">
         <div class="gallery-container">
-          <div class="face-label">Cylinder Wrap</div>
+          <div class="face-label" style="color: #e3a318; margin-bottom: 10px;">Cylinder Wrap</div>
           <canvas id="cylinderCanvas" width="400" height="200"></canvas>
         </div>
       </div>
@@ -59,15 +63,15 @@
       <div class="controls-panel">
         <div class="color-controls">
           <div class="color-item">
-            <label for="color">✏️ Ink Color</label>
+            <label for="color">Ink</label>
             <input type="color" id="color" value="#000000">
           </div>
           <div class="color-item">
-            <label for="bgColor">🎨 Background</label>
+            <label for="bgColor">Bg</label>
             <input type="color" id="bgColor" value="#F5DEB3">
           </div>
           <div class="color-item">
-            <label for="clear">🗑️ Clear</label>
+            <label for="clear">Clear</label>
             <button id="clear" class="trash-btn" title="Clear Current Face">🗑️</button>
           </div>
         </div>
@@ -78,25 +82,25 @@
           <h2>✨ Your Message</h2>
         </div>
 
-        <div class="message-input-wrapper">
-          <textarea id="messageInput" class="message-input" placeholder="Write your custom message or generate an AI story..." rows="5"></textarea>
-          <button id="generateStory" class="generate-story-btn" title="Generate AI Story">✨</button>
+        <div class="message-input-wrapper" style="position: relative;">
+          <textarea id="messageInput" class="message-input" placeholder="Write your custom message or generate an AI story..." rows="5" style="width: 100%; box-sizing: border-box;"></textarea>
+          <button id="generateStory" class="generate-story-btn" title="Generate AI Story" style="position: absolute; bottom: 10px; right: 10px;">✨</button>
         </div>
 
-        <div class="message-controls">
+        <div class="message-controls" style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
           <button id="toggleNarrate" class="btn btn-secondary narrate-enabled" title="Toggle auto-narration">
             🔊 Auto-Narrate: ON
           </button>
           <button id="submit" class="btn btn-primary">🚀 Submit Lantern</button>
         </div>
 
-        <div id="storyPreview" class="story-preview" style="display:none;">
-          <div class="preview-label">Generated Story Preview:</div>
-          <div id="storyPreviewText" class="preview-text"></div>
+        <div id="storyPreview" class="story-preview" style="display:none; margin-top: 15px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
+          <div class="preview-label" style="color: #e3a318; font-size: 0.9rem;">Generated Story Preview:</div>
+          <div id="storyPreviewText" class="preview-text" style="font-size: 0.9rem; margin-top: 5px;"></div>
         </div>
       </div>
 
-      <div id="anim" style="display:none;">
+      <div id="anim" style="display:none; text-align: center; color: #e3a318;">
         <p>Folding...</p>
       </div>
     </div>

@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Lantern Festival — Host</title>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/index.css">
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
   <script src="/js/audio.js"></script>
   </head>
   <body>
+    <canvas id="bg-canvas"></canvas>
     <div class="lobby-background" aria-hidden="true"></div>
 
     <!-- Sidebar Toggle Button -->
@@ -108,14 +111,14 @@
     <div class="lobby">
       <header class="lobby-header">
         <div class="header-left">
-          <h1>Lantern Festival — Host</h1>
+          <h1>Lantern Festival 天灯节</h1>
           <div id="pinArea" style="display:none;">
             <span>PIN: <strong id="pinText"></strong></span>
           </div>
         </div>
         <div class="header-right">
           <!-- Translation toggle (EN / 中) -->
-          <div style="display:flex;align-items:center;gap:8px;margin-right:12px;">
+          <div style="display:flex;align-items:center;gap:20px;margin-right:12px;">
             <button id="translateToggle" class="btn btn-secondary" title="Toggle English / Chinese">EN / 中</button>
             <div id="qrcode"></div>
           </div>
