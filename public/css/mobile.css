@@ -75,6 +75,8 @@ body { position: relative; min-height: 100svh; }
     justify-content: center;
     align-items: center;
     gap: 15px;
+    margin: 0px;
+    flex-wrap: wrap; /* allow items to wrap instead of overflowing */
 }
 
 label {

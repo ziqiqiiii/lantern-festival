@@ -26,7 +26,6 @@
 
   // Initialize audio elements
   function initAudio() {
-    console.log('Initializing audio elements');
     // Create background audio
     audioElements.background = new Audio();
     audioElements.background.loop = true;
@@ -69,7 +68,7 @@
       console.warn('Failed to apply saved background volume', e);
     }
 
-    console.log('Audio elements initialized');
+    // audio elements initialized
   }
 
   // Load audio with fallback
@@ -86,21 +85,16 @@
 
   // Play background music
   function playBackgroundMusic() {
-    console.log('Attempting to play background music');
     if (!audioElements.background) {
-      console.log('No background audio element found');
+      // no background element
       return;
     }
 
     if (audioState.muted) {
-      console.log('Audio is muted, not playing');
       audioElements.background.muted = true;
       return;
     }
-
-    console.log('Playing background music');
     audioElements.background.play().then(() => {
-      console.log('Background music playing successfully');
     }).catch(e => {
       console.warn('Failed to play background music:', e);
     });
@@ -110,27 +104,22 @@
 
   // Pause background music
   function pauseBackgroundMusic() {
-    console.log('Pausing background music');
     if (!audioElements.background) {
-      console.log('No background audio element found');
+      // no background element
       return;
     }
 
     audioElements.background.pause();
     audioState.backgroundPlaying = false;
-    console.log('Background music paused');
   }
 
   // Toggle background music
   function toggleBackgroundMusic() {
-    console.log('Toggling background music. Current state:', audioState.backgroundPlaying);
     if (audioState.backgroundPlaying) {
       pauseBackgroundMusic();
     } else {
       playBackgroundMusic();
     }
-
-    console.log('New state:', audioState.backgroundPlaying);
     return audioState.backgroundPlaying;
   }
 

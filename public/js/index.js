@@ -9,7 +9,7 @@ scene.fog = new THREE.FogExp2(0x050505, 0.03); // Distance fog
 const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 150);
 
 // Position: Low to the ground (-10), pushed back (+25)
-camera.position.set(0, 0, 13); 
+camera.position.set(0, 0, 13);
 
 // Where camera looking: Far ahead and slightly down
 camera.lookAt(0, -10, -20);
@@ -23,7 +23,7 @@ const geometry = new THREE.CylinderGeometry(0.4, 0.2, 0.7, 4, 1, true);
 
 // TOP LID
 const lidGeometry = new THREE.SphereGeometry(0.4, 4, 12, 0, Math.PI * 2, 0, Math.PI / 2);
-const material = new THREE.MeshBasicMaterial({ 
+const material = new THREE.MeshBasicMaterial({
     color: 0xc44d1b, transparent: true, opacity: 0.8, side: THREE.DoubleSide,
     depthWrite: true
 });
@@ -38,10 +38,10 @@ const flameGeometry = new THREE.CapsuleGeometry(0.05, 0.15, 4, 8);
 const flameMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
 // 2. The Glow (NOW A SOFT SPRITE)
 const glowTexture = createGlowTexture(); // <--- Generate the texture
-const glowMaterial = new THREE.SpriteMaterial({ 
-    map: glowTexture, 
+const glowMaterial = new THREE.SpriteMaterial({
+    map: glowTexture,
     color: 0xffaa00,
-    transparent: true, 
+    transparent: true,
     opacity: 0.95,
     blending: THREE.AdditiveBlending, // Makes it look like light
     depthWrite: false // Prevents sorting glitches
@@ -51,17 +51,17 @@ const lanterns = [];
 const lanternCount = 150;
 
 // TUNNEL SETTINGS
-const tunnelLength = 120; 
+const tunnelLength = 120;
 const tunnelWidth = 80;   // Start very wide
 
 for (let i = 0; i < lanternCount; i++) {
     const group = new THREE.Group();
     group.add(new THREE.Mesh(geometry, material));
     group.add(new THREE.LineSegments(edges, lineMaterial));
-    
+
     // 2. Add the Top Lid
     const lid = new THREE.Mesh(lidGeometry, material);
-    lid.position.y = 0.35; 
+    lid.position.y = 0.35;
     group.add(lid);
 
     // 3. Add the Flame (At the bottom opening)
@@ -74,21 +74,21 @@ for (let i = 0; i < lanternCount; i++) {
     glow.scale.set(1.7, 2, -0.1); // sprites (Width, Height, Depth)
     glow.position.y = 0; // Center of the flame
     group.add(glow);
-    
+
     // 5. Setup Animation Data
     group.userData = {
         // ... (Keep all your existing offsets: offsetZ, offsetX, etc.) ...
-        offsetZ: Math.random() * tunnelLength, 
+        offsetZ: Math.random() * tunnelLength,
         offsetX: (Math.random() - 0.5) * tunnelWidth,
         offsetY: -20 + Math.random() * 10,
         swaySpeed: Math.random() * 0.002,
         swayOffset: Math.random() * Math.PI,
-        
+
         // Flame Flicker Data
         flameMesh: flame,
         glowMesh: glow
     };
-    
+
     scene.add(group);
     lanterns.push(group);
 }
@@ -102,7 +102,7 @@ window.addEventListener('resize', () => {
 // 4. ANIMATION LOOP
 function animate() {
     requestAnimationFrame(animate);
-    const scrollPos = window.scrollY * 0.01; 
+    const scrollPos = window.scrollY * 0.01;
 
     lanterns.forEach(l => {
         const data = l.userData;
@@ -110,22 +110,22 @@ function animate() {
         // A. CALCULATE DEPTH (Z)
         let rawZ = data.offsetZ + scrollPos;
         let currentZ = ((rawZ % tunnelLength) + tunnelLength) % tunnelLength;
-        
+
         // Z Range: From 25 (Close) to -95 (Far)
-        let finalZ = 25 - currentZ; 
+        let finalZ = 25 - currentZ;
 
         // B. CALCULATE PROGRESS (0.0 = Close, 1.0 = Far)
-        let progress = (25 - finalZ) / tunnelLength; 
-        
+        let progress = (25 - finalZ) / tunnelLength;
+
         // C. FUNNEL: SQUEEZE X TOWARDS CENTER
         // At progress 1 (far), width is only 5% (0.05) of original
-        let funnelFactor = 1 - (progress * 0.95); 
-        l.position.x = data.offsetX * funnelFactor; 
-        
+        let funnelFactor = 1 - (progress * 0.95);
+        l.position.x = data.offsetX * funnelFactor;
+
         // D. RISE: PUSH Y TOWARDS TOP
         // This is the key change. We add (progress * 80).
         // This creates a steep upward slope.
-        l.position.y = data.offsetY + (progress * 80); 
+        l.position.y = data.offsetY + (progress * 80);
 
         l.position.z = finalZ;
 
@@ -140,17 +140,17 @@ function animate() {
         l.rotation.z = Math.cos(time * data.swaySpeed) * 0.05;
         // G. SMOOTH FIRE FLICKER
         if (data.flameMesh && data.glowMesh) {
-            
+
             // 1. Get the current time
             const time = Date.now();
-            
+
             // 2. Calculate smooth flicker using Sine Waves
             // 0.005 is the SPEED. Change to 0.002 to make it even slower.
-            const smoothWave = Math.sin(time * 0.005 + data.swayOffset); 
+            const smoothWave = Math.sin(time * 0.005 + data.swayOffset);
             const jitter = Math.random() * 0.05; // Tiny random shake
-            
+
             // Base scale (1.0) + Wave variation (0.15) + Jitter
-            const flicker = 1 + (smoothWave * 0.15) + jitter; 
+            const flicker = 1 + (smoothWave * 0.15) + jitter;
 
             // 3. Apply to Flame (The White Core)
             data.flameMesh.scale.set(flicker, flicker, flicker);
@@ -158,7 +158,7 @@ function animate() {
             // 4. Apply to Glow (The Orange Halo)
             const glowScale = flicker * 1.6;
             data.glowMesh.scale.set(glowScale, glowScale, glowScale);
-            
+
             // 5. Pulse Opacity
             data.glowMesh.material.opacity = 0.5 + (smoothWave * 0.1);
         }
@@ -173,7 +173,7 @@ function createGlowTexture() {
     const canvas = document.createElement('canvas');
     canvas.width = 64; canvas.height = 64;
     const context = canvas.getContext('2d');
-    
+
     // Draw a radial gradient (White center -> Orange mid -> Transparent edge)
     const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
     gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');   // Hot Center
@@ -183,7 +183,7 @@ function createGlowTexture() {
 
     context.fillStyle = gradient;
     context.fillRect(0, 0, 64, 64);
-    
+
     return new THREE.CanvasTexture(canvas);
 }
 
@@ -200,7 +200,19 @@ window.addEventListener('DOMContentLoaded', () => {
     const shouldOpen = params.get('openJoin') === '1';
     const storedError = sessionStorage.getItem('join_error');
 
-    if (shouldOpen || storedError) {
+    // Prefill PIN and optional username if present in the query string
+    const pinParam = params.get('pin');
+    const nameParam = params.get('username') || params.get('name');
+    if (pinParam) {
+        // ensure only digits and max 4 chars
+        codeInput.value = String(pinParam).replace(/[^0-9]/g, '').slice(0, 4);
+    }
+    if (nameParam) {
+        nameInput.value = String(nameParam).slice(0, 20);
+    }
+
+    // Open modal when explicitly requested, when a PIN is present, or when there was a stored error
+    if (shouldOpen || pinParam || storedError) {
         if (storedError) {
             showError(storedError);
             // Clear after showing once
@@ -266,9 +278,9 @@ function submitInfo() {
             return data;
         })
         .then(roomInfo => {
-            // --- SUCCESS! ROOM EXISTS ---                    
+            // --- SUCCESS! ROOM EXISTS ---
             submitBtn.textContent = 'Joining...';
-            
+
             // 1. Store Data
             sessionStorage.setItem('lantern_pin', codeValue);
             sessionStorage.setItem('lantern_name', nameValue);
@@ -282,16 +294,16 @@ function submitInfo() {
             window.location.href = `mobile.html?${params.toString()}`;
         })
         .catch(err => {
-            // --- FAILURE! ROOM ISSUE ---                    
+            // --- FAILURE! ROOM ISSUE ---
             // Re-enable the button so they can try again
             submitBtn.disabled = false;
             submitBtn.textContent = 'Enter Lantern Festival';
-            
+
             if (err.message === 'room-not-active') {
                 showRoomNotActiveMessage();
             } else {
                 console.error('Room check failed', err);
-                // Fallback: If you don't have a backend yet, 
+                // Fallback: If you don't have a backend yet,
                 // you might want to allow it anyway for testing:
                 // window.location.href = `mobile.html?pin=${codeValue}...`;
                 showError("Could not connect to room server.");
@@ -303,7 +315,7 @@ function submitInfo() {
 function showError(message) {
     errorMsg.textContent = message;
     errorMsg.classList.add('show');
-    
+
     // Shake the box slightly (fun effect)
     submitBtn.style.transform = "translateX(5px)";
     setTimeout(() => submitBtn.style.transform = "translateX(0)", 100);

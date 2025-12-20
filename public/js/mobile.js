@@ -51,12 +51,9 @@
   // Message panel elements
   const messageInput = document.getElementById('messageInput');
   const generateStoryBtn = document.getElementById('generateStory');
-  const toggleNarrateBtn = document.getElementById('toggleNarrate');
   const storyPreview = document.getElementById('storyPreview');
   const storyPreviewText = document.getElementById('storyPreviewText');
 
-  // State for auto-narrate
-  let autoNarrate = true;
 
   // small helper to set multiple inline styles
   function setStyles(el, styles) {
@@ -638,23 +635,6 @@
     });
   }
 
-  // removed duplicate submit handler earlier to ensure we only submit once
-  // Toggle auto-narrate
-  toggleNarrateBtn.addEventListener('click', () => {
-    autoNarrate = !autoNarrate;
-    if (autoNarrate) {
-      toggleNarrateBtn.textContent = '🔊 Auto-Narrate: ON';
-      toggleNarrateBtn.classList.remove('narrate-disabled');
-      toggleNarrateBtn.classList.add('narrate-enabled');
-    } else {
-      toggleNarrateBtn.textContent = '🔇 Auto-Narrate: OFF';
-      toggleNarrateBtn.classList.remove('narrate-enabled');
-      toggleNarrateBtn.classList.add('narrate-disabled');
-    }
-  });
-
-
-
   // Audio control event listeners
   if (toggleMusicBtn) {
     // Initialize button icon based on mute state (if available)
@@ -779,8 +759,7 @@
       faces,
       bgColor: bgColorInput.value,
       customMessage: messageInput.value || '',
-      customMessageBilingual: storyBilingual || null,
-      autoNarrate: autoNarrate
+      customMessageBilingual: storyBilingual || null
     };
     socket.emit('submit-lantern', payload);
     status.textContent = 'Lantern submitted — it should appear on the host screen soon.';

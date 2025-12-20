@@ -323,6 +323,9 @@
     Promise.all(texturePromises).then(textures => {
       const mesh = createLanternMesh(textures, data.bgColor, data.shape);
 
+      // Attach client id so we can map asynchronous translations back to this mesh
+      mesh.userData._cid = data._cid || null;
+
       // Attach bilingual story (preferred) and fallback single message
       // so clicking the lantern can instantly show either language.
       mesh.userData.customMessageBilingual = data.customMessageBilingual || (data.customMessage ? { en: data.customMessage, zh: null } : null);
@@ -335,6 +338,26 @@
       addLanternToScene(mesh);
     });
   }
+
+  // Allow host page to attach bilingual translations to existing lanterns
+  // when the translation arrives asynchronously. This finds the mesh with
+  // matching `_cid` and updates its userData so clicks will show the
+  // bilingual overlay.
+  window.updateLanternBilingual = function (_cid, bilingual) {
+    if (!_cid || !bilingual) return false;
+    for (const mesh of lanterns) {
+      try {
+        if (mesh.userData && mesh.userData._cid === _cid) {
+          mesh.userData.customMessageBilingual = bilingual;
+          mesh.userData.customMessage = bilingual.en || bilingual.zh || mesh.userData.customMessage || null;
+          return true;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    return false;
+  };
 
   function loadSingleTexture(loader, url) {
     return new Promise(resolve => {
@@ -408,16 +431,20 @@
   function onPointerClick(e) {
     if (!hoveredMesh) return;
     const author = hoveredMesh.userData.author;
-    // Prefer bilingual payload if present
+    // Only show overlays when a bilingual payload is available. This avoids
+    // showing single-language placeholders before translation completes.
     const bilingual = hoveredMesh.userData.customMessageBilingual || null;
-    const single = hoveredMesh.userData.customMessage || (bilingual ? bilingual.en : null);
+    if (!bilingual) return;
 
     // If host exposes a global overlay handler, delegate to it so host handles
-    // bilingual toggling and UI consistency. Otherwise fall back to local overlay.
+    // bilingual toggling and UI consistency.
     if (typeof window.showLanternStory === 'function') {
-      window.showLanternStory(bilingual || single, author);
-    } else if (single) {
-      showStoryOverlay(single, author);
+      // Pass the client id so the host overlay can attach/update translations
+      // when asynchronous `lantern-translation` events arrive.
+      window.showLanternStory(bilingual, author, { _cid: hoveredMesh.userData._cid });
+    } else if (bilingual.en || bilingual.zh) {
+      // Fallback to local overlay if host handler not present
+      showStoryOverlay(bilingual.en || bilingual.zh, author, { _cid: hoveredMesh.userData._cid });
     }
   }
 
@@ -445,7 +472,7 @@
   }
 
   // Story overlay creation/removal
-  function showStoryOverlay(text, author) {
+  function showStoryOverlay(text, author, meta) {
     // remove existing
     if (storyOverlay && storyOverlay.parentNode) storyOverlay.remove();
     const overlay = document.createElement('div');
@@ -465,6 +492,9 @@
     overlay.innerHTML = `<strong>${author || 'Someone'}'s story: </strong><div style="margin-top:8px;">${escapeHtml(text)}</div>`;
     document.body.appendChild(overlay);
     storyOverlay = overlay;
+
+    // Attach client id meta so async translations can update this overlay
+    if (meta && meta._cid) overlay.dataset._cid = meta._cid;
 
     // auto-hide after 8s
     setTimeout(() => {

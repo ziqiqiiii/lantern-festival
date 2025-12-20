@@ -109,19 +109,26 @@ body.mobile {
 .shape-selector label {
   font-weight: 600;
   color: #ffffff;
-  margin-right: 12px;
+  margin-right: 2px;
   font-size: 15px;
 }
 
+
 .shape-selector {
   position: relative;
+  /* Allow horizontal wrapping to avoid overflow when multiple controls exist */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .shape-selector select {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  padding: 12px 44px 12px 16px;
+  padding: 12px 16px 12px 16px;
   border: 2px solid rgba(255, 107, 107, 0.5);
   border-radius: 12px;
   background: rgba(18, 18, 28, 0.9);
@@ -133,16 +140,10 @@ body.mobile {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
-.shape-selector::after {
-  content: '▾';
-  position: absolute;
-  right: 24px;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  color: #ffffff;
-  opacity: 0.85;
-  font-size: 16px;
+.shape-selector select {
+  box-sizing: border-box;
+  min-width: 0; /* allow it to shrink inside flex container */
+  max-width: 100%;
 }
 
 .shape-selector select:focus {
@@ -274,7 +275,7 @@ body.mobile {
 .color-controls {
   display: flex;
   justify-content: center;
-  gap: 20px;
+  gap: 15px;
   flex-wrap: wrap;
 }
 
@@ -750,21 +751,55 @@ body.mobile {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(157, 157, 157, 0.8);
+  color: rgba(157, 157, 157, 0.9);
   font-weight: 700;
   font-size: 28px;
   background: none;
   transition: all 0.18s ease;
   pointer-events: none;
 }
-.bg-thumbnail.ai:hover::after {
+/* Only show the reload icon when the AI thumbnail is already selected and hovered */
+.bg-thumbnail.ai.selected:hover::after {
   content: '⟳';
   transform: scale(1.02);
   font-size: 32px;
 }
-.bg-thumbnail.ai.loading::after {
-  content: '⌛';
+/* Loading state: gray out, disable hover zoom, and show a spinning wheel */
+.bg-thumbnail.ai.loading {
+  filter: grayscale(0.6) contrast(0.9);
+  opacity: 0.75;
+  /* Keep pointer so user still sees clickable affordance while waiting */
+  cursor: pointer !important;
 }
+.bg-thumbnail.loading:hover {
+  transform: none;
+}
+.bg-thumbnail.ai.loading::after {
+  /* Replace hourglass with CSS spinner and center it */
+  content: '';
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.18);
+  border-top-color: rgba(255,255,255,0.95);
+  box-sizing: border-box;
+  animation: spin 1s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Ensure selected hover doesn't show reload icon while loading */
+.bg-thumbnail.ai.loading.selected:hover::after { content: '' !important; }
+
 
 .setting-group {
   margin-bottom: 18px;

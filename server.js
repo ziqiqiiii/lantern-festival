@@ -1,4 +1,3 @@
-require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -6,152 +5,108 @@ const path = require('path');
 const { createClient } = require('redis');
 
 const app = express();
+// Increase payload size for Express
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
 const server = http.createServer(app);
+// Increase payload size for Socket.IO
 const io = new Server(server, {
-  maxHttpBufferSize: 10 * 1024 * 1024
+  maxHttpBufferSize: 10 * 1024 * 1024 // 10MB
 });
 
 const PORT = process.env.PORT || 3000;
 
-// === 1. Configuration & Constants ===
-
-// Use the existing QWEN credentials
-const QWEN_API_KEY = process.env.QWEN_API_KEY;
-
-// FIXED: Correct Endpoint for Wanx (Tongyi Wanxiang)
-const DASHSCOPE_IMAGE_URL = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis';
-const DASHSCOPE_TASK_URL = 'https://dashscope.aliyuncs.com/api/v1/tasks';
-
-const CHINESE_LOCATIONS = [
-    "The Great Wall of China winding through mountains",
-    "The Karst mountains of Guilin along the Li River",
-    "The Forbidden City in Beijing",
-    "The Bund in Shanghai with futuristic skyline",
-    "West Lake in Hangzhou with the Leifeng Pagoda",
-    "Ancient Fenghuang (Phoenix) City with stilt houses",
-    "The Yellow Mountains (Huangshan) with sea of clouds",
-    "Zhangjiajie National Forest Park (Avatar mountains)",
-    "Suzhou classical gardens with water canals"
-];
-
+// Room timeout configuration (in milliseconds)
+// Options: 3hr, 6hr, 1day, 3day, 1week, 1month, or 'never'
 const ROOM_TIMEOUT_PRESETS = {
   '3hr': 3 * 60 * 60 * 1000,
+  '6hr': 6 * 60 * 60 * 1000,
   '1day': 24 * 60 * 60 * 1000,
+  '3day': 3 * 24 * 60 * 60 * 1000,
+  '1week': 7 * 24 * 60 * 60 * 1000,
+  '1month': 30 * 24 * 60 * 60 * 1000,
   'never': null
 };
-const ROOM_TIMEOUT = ROOM_TIMEOUT_PRESETS[process.env.ROOM_TIMEOUT || '1day'];
 
-// === 2. Helper: Wanx Image Generation (Submit -> Poll) ===
+const ROOM_TIMEOUT_SETTING = process.env.ROOM_TIMEOUT || '1day';
+const ROOM_TIMEOUT = ROOM_TIMEOUT_PRESETS[ROOM_TIMEOUT_SETTING] || ROOM_TIMEOUT_PRESETS['1day'];
 
-async function generateWanxImage(prompt) {
-    if (!QWEN_API_KEY) throw new Error("QWEN_API_KEY is missing");
+console.log(`Room timeout setting: ${ROOM_TIMEOUT_SETTING} (${ROOM_TIMEOUT ? ROOM_TIMEOUT / 1000 / 60 + ' minutes' : 'never'})`);
 
-    // Step 1: Submit the Task
-    console.log("🎨 Submitting Wanx generation task...");
-    const submitRes = await fetch(DASHSCOPE_IMAGE_URL, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${QWEN_API_KEY}`,
-            'Content-Type': 'application/json',
-            'X-DashScope-Async': 'enable'
-        },
-        body: JSON.stringify({
-            model: "wanx-v1",
-            input: {
-                prompt: prompt
-            },
-            parameters: {
-                style: "<auto>",
-                size: "1024*1024",
-                n: 1
-            }
-        })
-    });
+// Track room activity
+const roomActivity = new Map(); // pin -> { lastActivity: timestamp, timeoutId: timeoutId }
 
-    if (!submitRes.ok) {
-        const err = await submitRes.text();
-        throw new Error(`Wanx Submission Failed: ${err}`);
-    }
-
-    const submitData = await submitRes.json();
-
-    // Check if task_id exists
-    if (!submitData.output || !submitData.output.task_id) {
-         throw new Error(`Invalid Response from Wanx: ${JSON.stringify(submitData)}`);
-    }
-
-    const taskId = submitData.output.task_id;
-    console.log(`⏳ Task ID: ${taskId}. Polling for results...`);
-
-    // Step 2: Poll for status (Wait max 60 seconds)
-    const maxRetries = 30; // 30 * 2s = 60s
-    for (let i = 0; i < maxRetries; i++) {
-        await new Promise(r => setTimeout(r, 2000)); // Wait 2s
-
-        const checkRes = await fetch(`${DASHSCOPE_TASK_URL}/${taskId}`, {
-            headers: { 'Authorization': `Bearer ${QWEN_API_KEY}` }
-        });
-
-        const checkData = await checkRes.json();
-
-        if (checkData.output && checkData.output.task_status === 'SUCCEEDED') {
-            // Task done! Return the image URL
-            if (checkData.output.results && checkData.output.results[0]) {
-                return checkData.output.results[0].url;
-            }
-        } else if (checkData.output && checkData.output.task_status === 'FAILED') {
-            throw new Error(`Wanx Task Failed: ${checkData.output.message || 'Unknown error'}`);
-        }
-        // If 'PENDING' or 'RUNNING', loop continues
-    }
-
-    throw new Error("Wanx Task Timed Out");
-}
-
-
-// === 3. Room Management Logic ===
-const rooms = new Map();
-const roomActivity = new Map();
+// Redis client for rooms persistence (optional). If REDIS_URL not set, we'll keep in-memory.
 let redisClient = null;
-
-if (process.env.REDIS_URL) {
+const useRedis = !!process.env.REDIS_URL;
+if (useRedis) {
   redisClient = createClient({ url: process.env.REDIS_URL });
-  redisClient.connect().catch(console.error);
+  redisClient.on('error', (err) => console.error('Redis Client Error', err));
+  redisClient.connect().then(() => console.log('Connected to Redis'));
 }
+
+// In-memory store as fallback
+const rooms = new Map();
 
 function generatePin() {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
-function updateRoomActivity(pin) {
-    if (!ROOM_TIMEOUT) return;
-    const act = roomActivity.get(pin);
-    if (act?.timeoutId) clearTimeout(act.timeoutId);
+// Function to clean up inactive room
+function cleanupRoom(pin) {
+  console.log(`Cleaning up inactive room: ${pin}`);
+  const room = rooms.get(pin);
+  if (room) {
+    // Notify all connected clients
+    io.to(pin).emit('room-closed', { message: 'Room closed due to inactivity' });
 
-    const timeoutId = setTimeout(() => {
-        const r = rooms.get(pin);
-        if (r) {
-            io.to(pin).emit('room-closed', { message: 'Inactivity timeout' });
-            rooms.delete(pin);
-            roomActivity.delete(pin);
-            if (redisClient) redisClient.del(`room:${pin}`);
-        }
-    }, ROOM_TIMEOUT);
+    // Remove from memory
+    rooms.delete(pin);
+    roomActivity.delete(pin);
 
-    roomActivity.set(pin, { lastActivity: Date.now(), timeoutId });
+    // Remove from Redis if applicable
+    if (redisClient) {
+      redisClient.del(`room:${pin}`).catch(err => console.error('Redis delete error:', err));
+    }
+  }
 }
 
-// === 4. Express Routes ===
+// Function to update room activity and reset timeout
+function updateRoomActivity(pin) {
+  if (!ROOM_TIMEOUT) return; // No timeout if set to 'never'
+
+  const activity = roomActivity.get(pin);
+
+  // Clear existing timeout if any
+  if (activity && activity.timeoutId) {
+    clearTimeout(activity.timeoutId);
+  }
+
+  // Set new timeout
+  const timeoutId = setTimeout(() => {
+    cleanupRoom(pin);
+  }, ROOM_TIMEOUT);
+
+  roomActivity.set(pin, {
+    lastActivity: Date.now(),
+    timeoutId: timeoutId
+  });
+}
 
 app.get('/create-room', async (req, res) => {
   let pin;
-  do { pin = generatePin(); } while (rooms.has(pin));
-  rooms.set(pin, { hostSocketId: null, players: [] });
-  if (redisClient) await redisClient.hSet(`room:${pin}`, { players: '[]' });
+  do {
+    pin = generatePin();
+  } while (rooms.has(pin));
+  const room = { hostSocketId: null, players: [] };
+  rooms.set(pin, room);
+  if (redisClient) {
+    await redisClient.hSet(`room:${pin}`, { hostSocketId: '', players: JSON.stringify([]) });
+  }
+
+  // Initialize room activity tracking
   updateRoomActivity(pin);
+
   res.json({ pin });
 });
 
@@ -175,23 +130,65 @@ app.get('/check-room/:pin', (req, res) => {
   return res.status(status).json({ exists, pin, message });
 });
 
-// Serve join landing page
-app.get('/join', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Redirect legacy join routes to the main index page and open the join modal with the PIN prefilled.
+app.get(['/join', '/join.html'], (req, res) => {
+  // If query contains pin, preserve it. Otherwise just open the modal.
+  const pin = req.query.pin ? `&pin=${encodeURIComponent(req.query.pin)}` : '';
+  const target = `/index.html?openJoin=1${pin}`;
+  res.redirect(target);
 });
 
-// Serve join page at /join/:pin (mobile)
+// Serve join page at /join/:pin (mobile) — keep redirect for path-style QR links
 app.get('/join/:pin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'join.html'));
+  const pin = req.params.pin;
+  const target = `/index.html?openJoin=1&pin=${encodeURIComponent(pin)}`;
+  res.redirect(target);
 });
 
 // Serve static UI - must be AFTER API routes to avoid conflicts
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Helper to persist player list
+async function addPlayerToRoom(pin, player) {
+  const room = rooms.get(pin);
+  if (!room) return;
+  room.players.push(player);
+  if (redisClient) {
+    await redisClient.hSet(`room:${pin}`, { players: JSON.stringify(room.players) });
+  }
+}
 
-// === 5. Qwen-VL Logic (Existing) ===
+async function removePlayerFromRoom(pin, socketId) {
+  const room = rooms.get(pin);
+  if (!room) return;
+  room.players = room.players.filter(p => p.id !== socketId);
+  if (redisClient) {
+    await redisClient.hSet(`room:${pin}`, { players: JSON.stringify(room.players) });
+  }
+}
+
+// === QWEN / Visual LLM configuration ===
 const QWEN_BASE_URL = process.env.QWEN_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+const QWEN_API_KEY = process.env.QWEN_API_KEY || null;
 
+// Wanx / DashScope image endpoints for AI background generation
+const DASHSCOPE_IMAGE_URL = process.env.DASHSCOPE_IMAGE_URL || 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis';
+const DASHSCOPE_TASK_URL = process.env.DASHSCOPE_TASK_URL || 'https://dashscope.aliyuncs.com/api/v1/tasks';
+
+const CHINESE_LOCATIONS = [
+  "The Great Wall of China winding through mountains",
+  "The Karst mountains of Guilin along the Li River",
+  "The Forbidden City in Beijing",
+  "The Bund in Shanghai with futuristic skyline",
+  "West Lake in Hangzhou with the Leifeng Pagoda",
+  "Ancient Fenghuang (Phoenix) City with stilt houses",
+  "The Yellow Mountains (Huangshan) with sea of clouds",
+  "Zhangjiajie National Forest Park (Avatar mountains)",
+  "Suzhou classical gardens with water canals"
+];
+
+// Call the Qwen3-VL model directly with images and a user prompt.
+// Expects 'faces' to be an array of data URLs (data:image/png;base64,...).
 async function analyzeWithQWEN({ faces, shape, name }) {
   if (!QWEN_API_KEY) {
     console.log('QWEN_API_KEY not set — skipping visual analysis.');
@@ -230,13 +227,18 @@ Make each version ~80-120 words, warm traditional tone, and do not include any e
 
     const res = await fetch(`${QWEN_BASE_URL}/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${QWEN_API_KEY}` },
-      body: JSON.stringify({
-        model: 'qwen3-vl-plus',
-        messages: [{ role: 'user', content }],
-        max_tokens: 400
-      })
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${QWEN_API_KEY}`
+      },
+      body: JSON.stringify(payload)
     });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error('QWEN response error', res.status, txt);
+      return null;
+    }
 
     const json = await res.json();
 
@@ -277,21 +279,157 @@ Make each version ~80-120 words, warm traditional tone, and do not include any e
   }
 }
 
-// === 6. Socket Logic ===
+// Wanx image generation helper: submit an async task and poll for result
+async function generateWanxImage(prompt) {
+  if (!QWEN_API_KEY) {
+    throw new Error('QWEN_API_KEY not set for Wanx requests');
+  }
+
+  // Submit async generation request
+  const submitRes = await fetch(DASHSCOPE_IMAGE_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${QWEN_API_KEY}`,
+      'Content-Type': 'application/json',
+      'X-DashScope-Async': 'enable'
+    },
+    body: JSON.stringify({
+      model: 'wanx-v1',
+      input: { prompt },
+      parameters: { size: '1024*1024', n: 1 }
+    })
+  });
+
+  if (!submitRes.ok) {
+    const txt = await submitRes.text();
+    throw new Error('Wanx submit failed: ' + txt);
+  }
+
+  const submitData = await submitRes.json();
+  const taskId = submitData.output?.task_id;
+  if (!taskId) throw new Error('Wanx submit returned no task_id');
+
+  // Poll for completion
+  const maxRetries = 30;
+  for (let i = 0; i < maxRetries; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    const checkRes = await fetch(`${DASHSCOPE_TASK_URL}/${taskId}`, {
+      headers: { 'Authorization': `Bearer ${QWEN_API_KEY}` }
+    });
+    if (!checkRes.ok) continue;
+    const checkData = await checkRes.json();
+    const status = checkData.output?.task_status;
+    if (status === 'SUCCEEDED') {
+      const url = checkData.output?.results?.[0]?.url;
+      if (url) return url;
+      throw new Error('Wanx succeeded but no result URL');
+    }
+    if (status === 'FAILED') {
+      throw new Error('Wanx task failed: ' + (checkData.output?.message || 'unknown'));
+    }
+  }
+
+  throw new Error('Wanx task timed out');
+}
+
+// Translate a plain text message into a bilingual pair {en, zh} using QWEN chat.
+async function translateTextToBilingual(text) {
+  if (!QWEN_API_KEY) {
+    console.log('QWEN_API_KEY not set — skipping translation.');
+    return null;
+  }
+  if (!text || !String(text).trim()) return null;
+  if (typeof fetch === 'undefined') {
+    console.warn('Global fetch not available. Install node 18+ or provide a fetch polyfill.');
+    return null;
+  }
+
+  try {
+    const prompt = `Translate the following user-submitted lantern message into English and Simplified Chinese.\nReturn ONLY a JSON object with exactly two keys: \"en\" (English) and \"zh\" (Chinese).\nDo not include any extra commentary.\nExample: {"en":"Hello","zh":"你好"}\n\nMessage:\n${String(text).trim()}`;
+
+    const payload = {
+      model: 'qwen3-vl-plus',
+      messages: [
+        { role: 'user', content: [{ type: 'text', text: prompt }] }
+      ],
+      temperature: 0.1,
+      max_tokens: 400
+    };
+
+    const res = await fetch(`${QWEN_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${QWEN_API_KEY}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error('QWEN translate error', res.status, txt);
+      return null;
+    }
+
+    const json = await res.json();
+
+    // Extract raw text similar to analyzeWithQWEN
+    let raw = null;
+    if (Array.isArray(json.choices) && json.choices.length) {
+      const choice = json.choices[0];
+      const msg = choice.message || choice;
+      const content = msg.content || msg;
+      if (Array.isArray(content)) {
+        const seg = content.find(c => c.type === 'text' || c.type === 'output_text' || typeof c.text === 'string');
+        if (seg) raw = seg.text || seg.content || seg.output_text || null;
+      } else if (typeof content === 'string') {
+        raw = content;
+      } else if (choice.text) {
+        raw = choice.text;
+      }
+    }
+    if (!raw && json.output) raw = typeof json.output === 'string' ? json.output : (json.output?.text || null);
+
+    if (!raw) return null;
+
+    // Try parse JSON returned by model
+    try {
+      const parsed = JSON.parse(raw.trim());
+      return {
+        en: parsed.en || parsed.english || null,
+        zh: parsed.zh || parsed.cn || parsed.chinese || null
+      };
+    } catch (e) {
+      // If we can't parse, return English as raw and leave Chinese null
+      return { en: raw.trim(), zh: null };
+    }
+  } catch (err) {
+    console.error('translateTextToBilingual failed:', err);
+    return null;
+  }
+}
 
 io.on('connection', (socket) => {
-    console.log('socket connected', socket.id);
+  console.log('socket connected', socket.id);
 
-    // Host Join
-    socket.on('host-join', ({ pin }) => {
-        if (!rooms.has(pin)) return socket.emit('error-msg', { message: 'Room not found' });
-        const room = rooms.get(pin);
-        room.hostSocketId = socket.id;
-        socket.join(pin);
-        socket.pin = pin;
-        updateRoomActivity(pin);
-        socket.emit('room-state', { players: room.players });
-    });
+  socket.on('host-join', async (data) => {
+    const { pin } = data;
+    if (!rooms.has(pin)) {
+      socket.emit('error-msg', { message: 'Room not found' });
+      return;
+    }
+    const room = rooms.get(pin);
+    room.hostSocketId = socket.id;
+    socket.join(pin);
+    socket.pin = pin;
+    console.log(`Host ${socket.id} joined room ${pin}`);
+
+    // Update room activity
+    updateRoomActivity(pin);
+
+    // send current players if any
+    socket.emit('room-state', { players: room.players });
+  });
 
   socket.on('join-room', async (data) => {
     const { pin, name } = data;
@@ -340,10 +478,25 @@ io.on('connection', (socket) => {
     }
   });
 
+  // AI background generation (Wanx / DashScope)
+  socket.on('requestRandomAiBackground', async () => {
+    try {
+      const loc = CHINESE_LOCATIONS[Math.floor(Math.random() * CHINESE_LOCATIONS.length)];
+      const prompt = `Atmospheric night scene of ${loc} during Lantern Festival, glowing lanterns in sky, cinematic, digital art, 8k resolution`;
+      console.log(`Generating Wanx background for: ${loc}`);
+      const imageUrl = await generateWanxImage(prompt);
+      socket.emit('aiBackgroundGenerated', { imageUrl, locationName: loc });
+      console.log('✅ Wanx Image sent to host.');
+    } catch (err) {
+      console.error('❌ Wanx Gen Error:', err && err.message ? err.message : err);
+      socket.emit('aiBackgroundError', { message: 'Failed to generate image.' });
+    }
+  });
+
   // Make the submit handler async so we can process the submission
   socket.on('submit-lantern', async (data) => {
     console.log('Socket data size:', JSON.stringify(data).length);
-    const { pin, shape, faces, customMessage, autoNarrate } = data;
+    const { _cid, pin, shape, faces, customMessage, autoNarrate } = data;
     if (!pin) return;
 
     if (!faces || !Array.isArray(faces)) {
@@ -354,6 +507,7 @@ io.on('connection', (socket) => {
     updateRoomActivity(pin);
 
     const lanternData = {
+      _cid: _cid || null,
       id: socket.id,
       name: socket.playerName,
       shape,
@@ -365,46 +519,97 @@ io.on('connection', (socket) => {
       autoNarrate: autoNarrate !== false // Default to true if not specified
     };
 
-    // Generate Story (Qwen VL)
-    socket.on('generate-story', async (data, callback) => {
-        const story = await analyzeWithQWEN({ ...data, name: socket.playerName });
-        if (callback) callback(story);
-    });
+    io.to(pin).emit('new-lantern', lanternData);
+    console.log(`Lantern from ${socket.id} forwarded to host in ${pin}`);
 
-    // === AI Background via Wanx (Alibaba) ===
-    socket.on('requestRandomAiBackground', async () => {
-        try {
-            const loc = CHINESE_LOCATIONS[Math.floor(Math.random() * CHINESE_LOCATIONS.length)];
-            const prompt = `Atmospheric night scene of ${loc} during Lantern Festival, glowing lanterns in sky, cinematic, digital art, 8k resolution`;
+    // If the client did not supply a bilingual pair but provided a single
+    // customMessage, perform background translation and emit it when ready.
+    try {
+      if ((!lanternData.customMessageBilingual || lanternData.customMessageBilingual === null) && lanternData.customMessage) {
+        // Do translation in background without blocking the submit flow
+        (async () => {
+          console.log(`Starting background translation for room ${pin} (cid=${_cid || 'n/a'})`);
+          const bilingual = await translateTextToBilingual(lanternData.customMessage);
+          if (!bilingual) {
+            console.log('Background translation returned null for cid=', _cid);
+            return;
+          }
+          console.log('Background translation result:', { cid: _cid, bilingual });
+          try {
+            io.to(pin).emit('lantern-translation', { _cid: _cid || null, bilingual, name: lanternData.name });
+          } catch (e) {
+            console.warn('Failed to emit lantern-translation:', e);
+          }
+        })();
+      }
+    } catch (err) {
+      console.warn('Error starting background translation task', err);
+    }
+  });
 
-            console.log(`Generating Wanx background for: ${loc}`);
+  // Host requests to kick a player by socket id
+  socket.on('kick-player', async ({ id }) => {
+    try {
+      const roomPin = socket.pin;
+      if (!roomPin) return;
+      const room = rooms.get(roomPin);
+      if (!room) return;
 
-            // Call the polling helper
-            const imageUrl = await generateWanxImage(prompt);
+      // Only allow the host to kick
+      if (room.hostSocketId !== socket.id) {
+        console.warn('Non-host attempted to kick:', socket.id);
+        return;
+      }
 
-            socket.emit('aiBackgroundGenerated', { imageUrl, locationName: loc });
-            console.log("✅ Wanx Image sent to host.");
+      // Remove player from internal room state
+      await removePlayerFromRoom(roomPin, id);
 
-        } catch (err) {
-            console.error("❌ Wanx Gen Error:", err.message);
-            socket.emit('aiBackgroundError', { message: "Failed to generate image." });
+      // Notify the kicked socket directly and attempt to disconnect
+      try {
+        const targetSocket = io.sockets.sockets && io.sockets.sockets.get ? io.sockets.sockets.get(id) : (io.sockets.connected && io.sockets.connected[id]);
+        if (targetSocket && targetSocket.emit) {
+          targetSocket.emit('kicked', { reason: 'You were kicked by the host.' });
+          try { targetSocket.disconnect(true); } catch (e) { /* ignore */ }
         }
-    });
+      } catch (e) {
+        console.warn('Failed to notify/disconnect kicked socket', e);
+      }
 
-    // Disconnect
-    socket.on('disconnect', async () => {
-        if (socket.pin && rooms.has(socket.pin)) {
-            const r = rooms.get(socket.pin);
-            if (r.hostSocketId === socket.id) {
-                r.hostSocketId = null;
-                io.to(socket.pin).emit('host-disconnect');
-            } else {
-                r.players = r.players.filter(p => p.id !== socket.id);
-                if (redisClient) await redisClient.hSet(`room:${socket.pin}`, { players: JSON.stringify(r.players) });
-                io.to(socket.pin).emit('player-left', { id: socket.id });
-            }
-        }
-    });
+      // Broadcast updated player-left to room so host UI updates
+      io.to(roomPin).emit('player-left', { id });
+    } catch (err) {
+      console.error('kick-player error', err);
+    }
+  });
+
+  socket.on('disconnect', async () => {
+    // If host disconnected, clear room
+    if (socket.pin && rooms.has(socket.pin)) {
+      const room = rooms.get(socket.pin);
+      if (room.hostSocketId === socket.id) {
+        // keep players but mark host disconnected; we'll allow reconnection
+        room.hostSocketId = null;
+        io.to(socket.pin).emit('host-disconnect');
+        console.log(`Host disconnected from room ${socket.pin}`);
+      } else {
+        await removePlayerFromRoom(socket.pin, socket.id);
+        io.to(socket.pin).emit('player-left', { id: socket.id });
+      }
+    }
+    console.log('socket disconnected', socket.id);
+  });
 });
 
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const os = require('os');
+
+server.listen(PORT, () => {
+  const ifaces = os.networkInterfaces();
+  const addrList = [];
+  Object.keys(ifaces).forEach((name) => {
+    ifaces[name].forEach((iface) => {
+      if (iface.family === 'IPv4' && !iface.internal) addrList.push(iface.address);
+    });
+  });
+  console.log(`Server listening on http://localhost:${PORT}`);
+  if (addrList.length) console.log(`Also reachable on your LAN at: ${addrList.map(a => `http://${a}:${PORT}`).join(', ')}`);
+});

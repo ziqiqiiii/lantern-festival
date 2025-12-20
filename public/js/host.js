@@ -1,7 +1,7 @@
 // Optional: Override QR code URL for LAN testing
 // Set this in browser console if needed: window.__QR_HOST_OVERRIDE__ = 'http://YOUR_IP:3000'
 // window.__QR_HOST_OVERRIDE__ = 'http://10.195.41.191:3000';
-window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
+window.__QR_HOST_OVERRIDE__ = 'http://172.19.0.1:3000';
 
 (() => {
   const socket = io();
@@ -20,10 +20,8 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   const maxLanternsValue = document.getElementById('maxLanternsValue');
   const respawnCountInput = document.getElementById('respawnCount');
   const respawnCountValue = document.getElementById('respawnCountValue');
-  const muteNarratorCheckbox = document.getElementById('muteNarrator');
   const sfxVolumeInput = document.getElementById('sfxVolume');
   const sfxVolumeValue = document.getElementById('sfxVolumeValue');
-  const autoPlayStoriesCheckbox = document.getElementById('autoPlayStories');
   const bgThumbnails = document.querySelectorAll('.bg-thumbnail');
 
 
@@ -68,9 +66,7 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   const settings = {
     maxLanterns: 10,
     respawnCount: 3,
-    muteNarrator: false,
     bgVolume: 20,
-    autoPlayStories: true,
     bgImage: 'bg1.jpg'
   };
 
@@ -87,9 +83,7 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   function resetSettingsToDefaults() {
     settings.maxLanterns = 10;
     settings.respawnCount = 3;
-    settings.muteNarrator = false;
     settings.bgVolume = 20;
-    settings.autoPlayStories = true;
     settings.bgImage = 'bg1.jpg';
     saveSettings();
     updateSettingsUI();
@@ -106,11 +100,10 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     maxLanternsValue.textContent = settings.maxLanterns;
     respawnCountInput.value = settings.respawnCount;
     respawnCountValue.textContent = settings.respawnCount;
-    muteNarratorCheckbox.checked = settings.muteNarrator;
     // volume slider reflects background music level (0-100)
     if (sfxVolumeInput) sfxVolumeInput.value = settings.bgVolume;
     if (sfxVolumeValue) sfxVolumeValue.textContent = settings.bgVolume;
-    autoPlayStoriesCheckbox.checked = settings.autoPlayStories;
+
 
     // Update background thumbnail selection
     bgThumbnails.forEach(thumb => {
@@ -181,11 +174,7 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   });
   respawnCountInput.addEventListener('change', () => updateSliderFill(respawnCountInput));
 
-  muteNarratorCheckbox.addEventListener('change', (e) => {
-    settings.muteNarrator = e.target.checked;
-    saveSettings();
-    socket.emit('settings-updated', settings);
-  });
+
 
   // Background music volume slider
   if (sfxVolumeInput) {
@@ -210,11 +199,7 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     sfxVolumeInput.addEventListener('change', () => updateSliderFill(sfxVolumeInput));
   }
 
-  autoPlayStoriesCheckbox.addEventListener('change', (e) => {
-    settings.autoPlayStories = e.target.checked;
-    saveSettings();
-    socket.emit('settings-updated', settings);
-  });
+
 
   // Apply lantern config to three-stage.js
   function applyLanternConfig() {
@@ -265,10 +250,21 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   bgThumbnails.forEach(thumb => {
     thumb.addEventListener('click', () => {
       // For the AI thumbnail, call the placeholder/generator instead of
-      // immediately applying the image.
-      const isAI = thumb.classList.contains('ai') || thumb.dataset.bg === 'bgAI.jpg';
-      if (isAI) {
+      // immediately applying the image. Behavior change: only generate a
+      // new AI background when the AI thumbnail is already selected. If the
+      // AI thumbnail is not selected, a click will select it (reuse existing
+      // generated image) — preventing accidental regeneration.
+      const isAI = thumb.classList.contains('ai') || thumb.dataset.bg === 'bgAI.jpg' || thumb.dataset.bg?.startsWith('http');
+      if (isAI && thumb.classList.contains('selected')) {
+        // Already selected: user intends to (re)generate
         generateAIBackground(thumb);
+        return;
+      }
+      if (isAI) {
+        // Select the AI thumbnail without generating so host can reuse
+        settings.bgImage = thumb.dataset.bg;
+        saveSettings();
+        updateSettingsUI();
         return;
       }
 
@@ -284,7 +280,16 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   // Add event listener to play background music on first click
   document.addEventListener('click', () => {
     if (window.LanternAudio) {
-      window.LanternAudio.playBackgroundMusic();
+      // Defer actual playback to avoid blocking the UI on the first user click
+      // (audio decoding/AudioContext resume can cause a small freeze). Use
+      // setTimeout to keep the interaction responsive.
+      setTimeout(() => {
+        try {
+          window.LanternAudio.playBackgroundMusic();
+        } catch (e) {
+          console.warn('playBackgroundMusic failed:', e);
+        }
+      }, 0);
     }
   }, { once: true });
 
@@ -466,23 +471,11 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
   });
 
   // translation state for host UI
-  let hostStoryLang = 'en'; // 'en' or 'zh'
-  const translateToggle = document.getElementById('translateToggle');
-  if (translateToggle) {
-    translateToggle.addEventListener('click', () => {
-      hostStoryLang = hostStoryLang === 'en' ? 'zh' : 'en';
-      translateToggle.textContent = hostStoryLang === 'en' ? 'EN / 中' : '中 / EN';
-      // If an overlay is visible, switch it immediately
-      if (storyOverlay && storyOverlay.dataset) {
-        const contentEl = storyOverlay.querySelector('.lantern-story-content');
-        if (contentEl) {
-          const en = storyOverlay.dataset.en || '';
-          const zh = storyOverlay.dataset.zh || '';
-          contentEl.textContent = (hostStoryLang === 'zh' && zh) ? zh : en;
-        }
-      }
-    });
-  }
+  // translation state for host UI — toggled by overlay badge
+    let hostStoryLang = 'en'; // 'en' or 'zh'
+  // Cache bilingual translations by client id so late translations attach
+  // to newly-spawned lanterns and survive respawns.
+    const bilingualCache = new Map();
 
   // Handle new lantern submission
   socket.on('new-lantern', (data) => {
@@ -507,26 +500,30 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     }
     _markLanternSpawned(spawnKey);
 
+    // If we already have a cached bilingual translation for this submission,
+    // attach it so the stage and overlays keep it stored on the mesh userdata.
+    if (data._cid && bilingualCache.has(data._cid)) {
+      data.customMessageBilingual = bilingualCache.get(data._cid);
+    }
+
     // spawn on THREE.js stage if available
     if (window.spawnLanternOnStage) {
-      // ensure bilingual payload is present so stage can store it on the mesh
-      if (!data.customMessageBilingual && data.customMessage) {
-        data.customMessageBilingual = { en: data.customMessage, zh: null };
-      }
       window.spawnLanternOnStage(data);
     }
 
     // Attach bilingual story to mesh/userData so host can toggle quickly
-    // const storyPayload = data.customMessageBilingual || (data.customMessage ? { en: data.customMessage, zh: null } : null);
-    //
-    // // If the MCP produced a story and autoplay is enabled, show it
-    // if (storyPayload && settings.autoPlayStories) {
-    //   showLanternStory(storyPayload, data.name);
-    // }
+    // NOTE: we only auto-show when a bilingual payload is present. If a
+    // translation has not arrived yet, we avoid showing a single-language
+    // overlay — the overlay will become available when the bilingual
+    // translation arrives and the user can click the lantern to view it.
+    const storyPayload = data.customMessageBilingual || null;
+
+    // Do not auto-show story overlays on arrival. Host can click the lantern
+    // to view the bilingual story once it is available.
   });
 
   // Replace existing showLanternStory with bilingual-aware version
-  function showLanternStory(textOrPair, author) {
+  function showLanternStory(textOrPair, author, meta) {
     try {
       // Cancel if message is empty/whitespace
       if (typeof textOrPair === 'string') {
@@ -551,15 +548,67 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
       overlay.style.padding = '14px 18px';
       overlay.style.borderRadius = '10px';
       overlay.style.zIndex = 9999;
+      overlay.style.minWidth = '200px';
       overlay.style.maxWidth = '70%';
       overlay.style.boxShadow = '0 6px 18px rgba(0,0,0,0.4)';
       overlay.style.fontSize = '14px';
       overlay.style.lineHeight = '1.4';
 
-      // header
+      // header (bilingual-aware)
       const header = document.createElement('div');
+      header.className = 'lantern-story-header';
       header.style.fontWeight = '700';
-      header.textContent = `${author || 'Someone'}'s story:`;
+      // store author on overlay for later updates
+      const authorName = author || 'Someone';
+      overlay.dataset.author = authorName;
+      function computeHeaderText(name, lang) {
+        if (lang === 'zh') return `${name} 的故事：`;
+        return `${name}'s story:`;
+      }
+      header.textContent = computeHeaderText(authorName, hostStoryLang);
+
+      // language toggle badge (small) in top-right of overlay
+      const langBadge = document.createElement('button');
+      langBadge.type = 'button';
+      langBadge.setAttribute('aria-label', 'Toggle language');
+      langBadge.className = 'lantern-lang-badge';
+      langBadge.style.position = 'absolute';
+      langBadge.style.right = '8px';
+      langBadge.style.top = '8px';
+      langBadge.style.background = 'rgba(255,255,255,0.06)';
+      langBadge.style.border = '1px solid rgba(255,255,255,0.12)';
+      langBadge.style.color = 'white';
+      langBadge.style.padding = '4px 8px';
+      langBadge.style.borderRadius = '8px';
+      langBadge.style.fontSize = '12px';
+      langBadge.style.cursor = 'pointer';
+      langBadge.style.zIndex = '10000';
+      langBadge.textContent = hostStoryLang === 'en' ? '中' : 'EN';
+      langBadge.addEventListener('click', () => {
+        hostStoryLang = hostStoryLang === 'en' ? 'zh' : 'en';
+        langBadge.textContent = hostStoryLang === 'en' ? '中' : 'EN';
+        // switch immediately if overlay present
+        if (overlay && overlay.dataset) {
+          const contentEl = overlay.querySelector('.lantern-story-content');
+          if (contentEl) {
+            const en = overlay.dataset.en || '';
+            const zh = overlay.dataset.zh || '';
+            // If Chinese requested but not yet available, show placeholder
+            if (hostStoryLang === 'zh' && !zh) {
+              contentEl.textContent = 'Translating...';
+              overlay.classList.add('translating');
+            } else {
+              overlay.classList.remove('translating');
+              contentEl.textContent = (hostStoryLang === 'zh' && zh) ? zh : en;
+            }
+          }
+          // update header to match language
+          try {
+            const hdr = overlay.querySelector('.lantern-story-header');
+            if (hdr) hdr.textContent = computeHeaderText(overlay.dataset.author || 'Someone', hostStoryLang);
+          } catch (e) { /* ignore */ }
+        }
+      });
 
       const content = document.createElement('div');
       content.className = 'lantern-story-content';
@@ -582,7 +631,12 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
       }
 
       overlay.appendChild(header);
+      overlay.appendChild(langBadge);
       overlay.appendChild(content);
+
+      // Attach optional metadata (e.g. client id) so async translations
+      // can update the exact overlay when they arrive.
+      if (meta && meta._cid) overlay.dataset._cid = meta._cid;
       document.body.appendChild(overlay);
       storyOverlay = overlay;
 
@@ -681,6 +735,57 @@ window.__QR_HOST_OVERRIDE__ = 'http://10.195.66.208:3000';
     if (aiThumb) {
       aiThumb.classList.remove('loading');
       aiThumb.style.cursor = 'pointer';
+    }
+  });
+
+  // When the server finishes translating a submitted lantern message,
+  // attach bilingual pair and optionally auto-show the story overlay.
+  socket.on('lantern-translation', (data) => {
+    try {
+      console.log('lantern-translation received', data);
+      const { _cid, bilingual, name } = data || {};
+      if (!bilingual) return;
+
+      // Cache bilingual by client id so future spawns/respawns include it
+      if (_cid) bilingualCache.set(_cid, bilingual);
+
+      // Notify THREE.js stage to update any existing mesh that matches
+      try {
+        if (window.updateLanternBilingual) {
+          window.updateLanternBilingual(_cid, bilingual);
+        }
+      } catch (e) {
+        console.warn('updateLanternBilingual hook failed', e);
+      }
+
+      // If an overlay is currently visible and matches this _cid, update it
+      // in-place so the host sees the translation without needing a reload.
+      if (storyOverlay && storyOverlay.dataset && storyOverlay.dataset._cid === (_cid || '')) {
+        storyOverlay.dataset.en = bilingual.en || '';
+        storyOverlay.dataset.zh = bilingual.zh || '';
+        const contentEl = storyOverlay.querySelector('.lantern-story-content');
+        if (contentEl) {
+          // If host requested Chinese and we were showing a translating
+          // placeholder, replace it with the translated text.
+          if (hostStoryLang === 'zh' && bilingual.zh) {
+            contentEl.textContent = bilingual.zh;
+          } else {
+            // Otherwise ensure English is present (or keep existing)
+            contentEl.textContent = bilingual.en || contentEl.textContent;
+          }
+        }
+        storyOverlay.classList.remove('translating');
+        // Update header language if present
+        try {
+          const hdr = storyOverlay.querySelector('.lantern-story-header');
+          if (hdr) hdr.textContent = (hostStoryLang === 'zh') ? ((storyOverlay.dataset.author || 'Someone') + ' 的故事：') : `${storyOverlay.dataset.author || 'Someone'}'s story:`;
+        } catch (e) { /* ignore */ }
+      }
+
+      // Do NOT auto-show a story here if no overlay exists; host will click
+      // the lantern to view the bilingual once available (prevents duplicate overlays).
+    } catch (e) {
+      console.warn('Error handling lantern-translation', e);
     }
   });
 
